@@ -1,14 +1,14 @@
 <h2 align="center">My WezTerm Config</h2>
 
 <p align="center">
-  <a href="https://github.com/KevinSilvester/wezterm-config/stargazers">
-    <img alt="Stargazers" src="https://img.shields.io/github/stars/KevinSilvester/wezterm-config?style=for-the-badge&logo=starship&color=C9CBFF&logoColor=D9E0EE&labelColor=302D41">
+  <a href="https://github.com/akatekhanh/wezterm-config/stargazers">
+    <img alt="Stargazers" src="https://img.shields.io/github/stars/akatekhanh/wezterm-config?style=for-the-badge&logo=starship&color=C9CBFF&logoColor=D9E0EE&labelColor=302D41">
   </a>
-  <a href="https://github.com/KevinSilvester/wezterm-config/issues">
-    <img alt="Issues" src="https://img.shields.io/github/issues/KevinSilvester/wezterm-config?style=for-the-badge&logo=gitbook&color=B5E8E0&logoColor=D9E0EE&labelColor=302D41">
+  <a href="https://github.com/akatekhanh/wezterm-config/issues">
+    <img alt="Issues" src="https://img.shields.io/github/issues/akatekhanh/wezterm-config?style=for-the-badge&logo=gitbook&color=B5E8E0&logoColor=D9E0EE&labelColor=302D41">
   </a>
-  <a href="https://github.com/KevinSilvester/wezterm-config/actions/workflows/lint.yml">
-    <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/KevinSilvester/wezterm-config/lint.yml?&style=for-the-badge&logo=githubactions&label=CI&color=A6E3A1&logoColor=D9E0EE&labelColor=302D41">
+  <a href="https://github.com/akatekhanh/wezterm-config/actions/workflows/lint.yml">
+    <img alt="Build" src="https://img.shields.io/github/actions/workflow/status/akatekhanh/wezterm-config/lint.yml?&style=for-the-badge&logo=githubactions&label=CI&color=A6E3A1&logoColor=D9E0EE&labelColor=302D41">
   </a>
 </p>
 
@@ -18,7 +18,7 @@
 
 ### Features
 
-- [**Background Image Selector**](https://github.com/KevinSilvester/wezterm-config/blob/master/utils/backdrops.lua)
+- [**Background Image Selector**](https://github.com/akatekhanh/wezterm-config/blob/master/utils/backdrops.lua)
 
   - Cycle images
   - Fuzzy search for image
@@ -26,9 +26,9 @@
 
   > See: [key bindings](#background-images) for usage
 
-- [**GPU Adapter Selector**](https://github.com/KevinSilvester/wezterm-config/blob/master/utils/gpu_adapter.lua)
+- [**GPU Adapter Selector**](https://github.com/akatekhanh/wezterm-config/blob/master/utils/gpu_adapter.lua)
 
-  > :bulb: Only works if the [`front_end`](https://github.com/KevinSilvester/wezterm-config/blob/master/config/appearance.lua#L8) option is set to `WebGpu`.
+  > :bulb: Only works if the [`front_end`](https://github.com/akatekhanh/wezterm-config/blob/master/config/appearance.lua#L8) option is set to `WebGpu`.
 
   A small utility to select the best GPU + Adapter (graphics API) combo for your machine.
 
@@ -81,13 +81,6 @@
         scoop install wezterm
         ```
 
-      - Install with Scoop (portable)
-
-        ```sh
-        scoop bucket add k https://github.com/KevinSilvester/scoop-bucket
-        scoop install k/wezterm
-        ```
-
       - Install with winget
 
         ```sh
@@ -111,12 +104,6 @@
         scoop install wezterm-nightly
         ```
 
-      - Install with Scoop (portable)
-
-        ```sh
-        scoop bucket add k https://github.com/KevinSilvester/scoop-bucket
-        scoop install k/wezterm-nightly
-        ```
       </details>
 
     > :bulb:<br>
@@ -198,7 +185,7 @@
 
   1.  ```sh
       # On Windows and Unix systems
-      git clone https://github.com/KevinSilvester/wezterm-config.git ~/.config/wezterm
+      git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
       ```
   2.  And Done!!! 🎉🎉
 
@@ -389,6 +376,7 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 ### References/Inspirations
 
+- <https://github.com/KevinSilvester/wezterm-config> (original config)
 - <https://github.com/rxi/lume>
 - <https://github.com/catppuccin/wezterm>
 - <https://github.com/wez/wezterm/discussions/628#discussioncomment-1874614>
