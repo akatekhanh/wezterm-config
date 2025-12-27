@@ -27,6 +27,7 @@ local keys = {
       action = act.ShowLauncherArgs({ flags = 'FUZZY|WORKSPACES' }),
    },
    { key = 'F11', mods = 'NONE',    action = act.ToggleFullScreen },
+   { key = 'f',   mods = 'SUPER|SHIFT', action = act.ToggleFullScreen },
    { key = 'F12', mods = 'NONE',    action = act.ShowDebugOverlay },
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
@@ -174,6 +175,9 @@ local keys = {
          backdrops:toggle_focus(window)
       end)
    },
+
+   -- neovim: send Ctrl+/ when Cmd+j is pressed (for Snacks terminal toggle)
+   { key = 'j', mods = 'SUPER', action = act.SendKey({ key = '/', mods = 'CTRL' }) },
 
    -- panes --
    -- panes: split panes

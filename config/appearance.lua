@@ -50,7 +50,7 @@ return {
 
    -- Prevent full screen by default
    window_decorations = 'RESIZE',
-   window_background_opacity = 0.8,
+   window_background_opacity = 1.0,
    window_frame = {
       active_titlebar_bg = '#090909',
       -- font = fonts.font,

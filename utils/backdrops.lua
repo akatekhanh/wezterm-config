@@ -132,9 +132,11 @@ end
 ---@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 ---@param background_opts table background option
 function BackDrops:_set_opt(window, background_opts)
+   local effective = window:effective_config()
    window:set_config_overrides({
       background = background_opts,
-      enable_tab_bar = window:effective_config().enable_tab_bar,
+      enable_tab_bar = effective.enable_tab_bar,
+      window_background_opacity = effective.window_background_opacity,
    })
 end
 
@@ -142,6 +144,7 @@ end
 ---@private
 ---@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:_set_focus_opt(window)
+   local effective = window:effective_config()
    local opts = {
       background = {
          {
@@ -153,7 +156,8 @@ function BackDrops:_set_focus_opt(window)
             opacity = 1,
          },
       },
-      enable_tab_bar = window:effective_config().enable_tab_bar,
+      enable_tab_bar = effective.enable_tab_bar,
+      window_background_opacity = effective.window_background_opacity,
    }
    window:set_config_overrides(opts)
 end
