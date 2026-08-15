@@ -9,6 +9,12 @@ return {
          multiplexing = 'None',
          default_prog = { 'zsh', '-l' },
          assume_shell = 'Posix'
+      },
+      -- khanhpc - Red color scheme when connected
+      {
+         name = 'khanhpc',
+         remote_address = '100.69.140.48',
+         username = 'akatekhanh',
       }
    },
 

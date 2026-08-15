@@ -5,7 +5,7 @@ return {
    exit_behavior_messaging = 'Verbose',
    status_update_interval = 1000,
 
-   scrollback_lines = 10000,
+   scrollback_lines = 50000,
 
    hyperlink_rules = {
       -- Matches: a URL in parens: (URL)

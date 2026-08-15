@@ -58,6 +58,12 @@ local keys = {
    { key = 'LeftArrow',  mods = 'ALT',     action = act.SendString '\x1bb' },
    { key = 'RightArrow', mods = 'ALT',     action = act.SendString '\x1bf' },
 
+   -- multiline input: newline instead of submit (Claude Code, REPLs) --
+   { key = 'Enter',      mods = 'SHIFT',       action = act.SendString '\x1b\r' },
+
+   -- clipboard image -> remote host, then type the remote path into the pane --
+   { key = 'i',          mods = 'ALT',         action = act.EmitEvent('remote.paste-image') },
+
    -- copy/paste --
    { key = 'c',          mods = 'CTRL|SHIFT',  action = act.CopyTo('Clipboard') },
    { key = 'v',          mods = 'CTRL|SHIFT',  action = act.PasteFrom('Clipboard') },
@@ -82,6 +88,17 @@ local keys = {
          window:perform_action(act.EmitEvent('background.rotate'), pane)
       end),
    },
+   {
+      key = 'k',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, pane)
+         window:perform_action(act.SpawnTab({ DomainName = 'khanhpc' }), pane)
+         -- Trigger theme after a short delay for SSH to connect
+         wezterm.time.call_after(wezterm.time.Duration.parse_sec('0.5'), function()
+            window:emit_event('trigger-khanhpc-theme', pane)
+         end)
+      end),
+   },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- tabs: navigation
@@ -95,7 +112,8 @@ local keys = {
    { key = '0',          mods = mod.SUPER_REV, action = act.EmitEvent('tabs.reset-tab-title') },
 
    -- tab: hide tab-bar
-   { key = '9',          mods = mod.SUPER,     action = act.EmitEvent('tabs.toggle-tab-bar'), },
+   -- moved off SUPER + 9 so that key can match iTerm2's "jump to last tab"
+   { key = '9',          mods = mod.SUPER_REV, action = act.EmitEvent('tabs.toggle-tab-bar'), },
 
    -- window --
    -- window: spawn windows
@@ -194,7 +212,7 @@ local keys = {
 
    -- panes: zoom+close pane
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
-   { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
+   { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = true }) },
 
    -- panes: navigation
    { key = 'k',     mods = mod.SUPER_REV, action = act.ActivatePaneDirection('Up') },
@@ -236,6 +254,14 @@ local keys = {
    },
 }
 
+-- tabs: iTerm2-style direct navigation.
+-- SUPER + 1..8 -> tab index 0..7, SUPER + 9 -> last tab.
+-- SUPER + 0 is left alone; it is bound to the tab-title prompt above.
+for i = 1, 8 do
+   table.insert(keys, { key = tostring(i), mods = mod.SUPER, action = act.ActivateTab(i - 1) })
+end
+table.insert(keys, { key = '9', mods = mod.SUPER, action = act.ActivateTab(-1) })
+
 -- stylua: ignore
 local key_tables = {
    resize_font = {
@@ -271,4 +297,9 @@ return {
    keys = keys,
    key_tables = key_tables,
    mouse_bindings = mouse_bindings,
+
+   -- Hold this to select text with the mouse while the remote app (tmux, nvim,
+   -- Claude Code) has mouse reporting enabled. WezTerm defaults to SHIFT;
+   -- ALT matches iTerm2's Option, which is the existing muscle memory here.
+   bypass_mouse_reporting_modifiers = 'ALT',
 }

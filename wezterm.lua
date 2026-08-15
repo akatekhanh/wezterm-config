@@ -5,6 +5,7 @@ require('utils.backdrops')
    -- :set_images_dir(require('wezterm').home_dir .. '/Pictures/Wallpapers/')
    :set_images()
 
+require('events.khanhpc-theme').setup()
 require('events.left-status').setup()
 require('events.right-status').setup({
    date_format = '%a %H:%M:%S',
@@ -16,6 +17,8 @@ require('events.new-tab-button').setup()
 require('events.background-rotation').setup({ mode = 'cycle' }) -- or 'random'
 require('events.window-resized').setup()
 require('events.window-state').setup()
+-- `host` must be an ssh alias that resolves from ~/.ssh/config (or user@address)
+require('events.remote-image-paste').setup({ host = 'macmini' })
 
 return Config:init()
    :append(require('config.appearance'))

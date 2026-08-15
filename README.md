@@ -54,10 +54,11 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | Keys | Action |
 |------|--------|
 | `SUPER + t` | New tab |
-| `SUPER + w` | Close pane |
-| `SUPER + \` | Split vertical |
-| `SUPER_REV + \` | Split horizontal |
+| `SUPER + w` | Close pane (asks to confirm) |
+| `SUPER + \` | Split vertical (new pane below) |
+| `SUPER_REV + \` | Split horizontal (new pane to the right) |
 | `SUPER + Enter` | Toggle pane zoom |
+| `SHIFT + Enter` | Insert a newline instead of submitting (Claude Code, REPLs) |
 | `F12` | Debug overlay |
 
 ### Navigation
@@ -65,6 +66,9 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | Keys | Action |
 |------|--------|
 | `SUPER + [` / `]` | Previous/Next tab |
+| `SUPER + 1` … `8` | Jump straight to tab 1-8 |
+| `SUPER + 9` | Jump to last tab |
+| `SUPER_REV + 9` | Toggle tab bar |
 | `SUPER_REV + h/j/k/l` | Move between panes |
 | `SUPER + u` / `d` | Scroll up/down |
 

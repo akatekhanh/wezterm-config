@@ -509,7 +509,11 @@ For comprehensive backdrop recommendations, image sources, and technical specifi
 **Quick reference:**
 - Images stored in `backdrops/` directory
 - Supports: jpg, jpeg, png, gif, bmp, ico, tiff, pnm, dds, tga
-- Current opacity: 0.3 with brightness 0.3 (configured in `config/appearance.lua`)
+- Current opacity: 0.18 with brightness 0.5, sized with `Cover` to preserve aspect ratio
+  (configured in `BackDrops:_create_opts()` in `utils/backdrops.lua`, not `config/appearance.lua`)
+- Changing `_create_opts()` does NOT affect an open window until the backdrop is
+  re-applied (`SUPER + .` / `SUPER + /` / new tab), because the background lives in a
+  `window:set_config_overrides()` override that survives config reloads
 - Focus mode (`SUPER + b`) shows solid color instead of image
 
 ## Advanced Debugging

@@ -88,11 +88,16 @@ function BackDrops:_create_opts()
          source = { File = self.images[self.current_idx] },
          horizontal_align = 'Center',
          vertical_align = 'Middle',
-         width = '100%',
-         height = '100%',
+         -- 'Cover' keeps the aspect ratio and crops the overflow.
+         -- '100%' stretches the image to the window, which distorts any
+         -- backdrop whose aspect ratio differs from the window's.
+         width = 'Cover',
+         height = 'Cover',
          repeat_x = 'NoRepeat',
          repeat_y = 'NoRepeat',
-         opacity = 0.3,
+         -- Dimmed so bright backdrops don't fight with text/diff highlights
+         hsb = { brightness = 0.5, hue = 1.0, saturation = 0.9 },
+         opacity = 0.18,
       },
    }
 end

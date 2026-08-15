@@ -4,7 +4,7 @@ local colors = require('colors.custom')
 local wezterm = require('wezterm')
 
 return {
-   max_fps = 60,
+   max_fps = 120,
    front_end = 'WebGpu',
    webgpu_power_preference = 'HighPerformance',
    webgpu_preferred_adapter = gpu_adapters:pick_best(),
@@ -12,12 +12,12 @@ return {
    -- webgpu_preferred_adapter = gpu_adapters:pick_manual('Gl', 'Other'),
    underline_thickness = '1.5pt',
 
-   -- cursor
-   animation_fps = 60,
+   -- cursor (SteadyBlock + no blink reduces flicker during Claude Code streaming)
+   animation_fps = 1,
    cursor_blink_ease_in = 'EaseOut',
    cursor_blink_ease_out = 'EaseOut',
-   default_cursor_style = 'BlinkingBlock',
-   cursor_blink_rate = 650,
+   default_cursor_style = 'SteadyBlock',
+   cursor_blink_rate = 0,
 
    -- color scheme
    colors = wezterm.get_builtin_color_schemes()['Catppuccin Mocha'], -- Change to any built-in theme
@@ -32,7 +32,11 @@ return {
    enable_tab_bar = true,
    hide_tab_bar_if_only_one_tab = false,
    use_fancy_tab_bar = false,
-   tab_max_width = 25,
+   -- Narrow tabs so more of them fit on screen. Chỗ thật cho tiêu đề =
+   -- tab_max_width - 4 (pill: 2 nửa vòng tròn + space + padding) - 2 (số thứ tự)
+   -- - width của badge nếu có (xem SEGMENT_WIDTH trong events/tab-title.lua).
+   -- Ở mức 18 thì tiêu đề chỉ còn 12 cột — khá chật với tiếng Việt.
+   tab_max_width = 18,
    show_tab_index_in_tab_bar = false,
    switch_to_last_active_tab_when_closing_tab = true,
 
@@ -50,7 +54,11 @@ return {
 
    -- Prevent full screen by default
    window_decorations = 'RESIZE',
-   window_background_opacity = 1.0,
+   -- Kính mờ thật của macOS. Các nền 'rgba(0, 0, 0, 0.5)' trong tab/status bar chỉ
+   -- thành glassmorphism khi opacity < 1 VÀ blur > 0; để opacity = 1.0 thì chúng chỉ
+   -- blend với ảnh backdrop chứ không có blur.
+   window_background_opacity = 0.92,
+   macos_window_background_blur = 30,
    window_frame = {
       active_titlebar_bg = '#090909',
       -- font = fonts.font,

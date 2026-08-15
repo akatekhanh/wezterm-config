@@ -5,6 +5,7 @@
 local wezterm = require('wezterm')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
+local ui = require('colors.palette').ui
 
 ---
 -- =======================================
@@ -47,8 +48,44 @@ local GLYPH_CIRCLE = nf.fa_circle --[[  ]]
 local GLYPH_ADMIN = nf.md_shield_half_full --[[ 󰞀 ]]
 local GLYPH_LINUX = nf.cod_terminal_linux --[[  ]]
 local GLYPH_DEBUG = nf.fa_bug --[[  ]]
+-- Dùng glyph Nerd Font, KHÔNG dùng emoji: '🖥️' (U+1F5A5 U+FE0F) được wezterm tính là
+-- 1 cell nhưng vẽ rộng 15.6px trong cell 10px (kiểm tra: wezterm ls-fonts --text ...),
+-- nên nó tràn sang ô kế bên → tab chồng chữ. Glyph Nerd Font có x_adv=10, cells=1.
+local GLYPH_KHANHPC = nf.md_monitor
 -- local GLYPH_SEARCH = nf.fa_search --[[  ]]
-local GLYPH_SEARCH = '🔭'
+local GLYPH_SEARCH = nf.md_magnify
+local KHANHPC_LABEL = 'KhanhPC'
+
+-- Tên process dạng chữ ăn 5-6 cột ('zsh ~ ', 'node ~ ') trong ~21 cột khả dụng, nên
+-- tiêu đề tiếng Việt luôn bị cắt. Process hay dùng đổi thành 1 glyph; process lạ vẫn
+-- hiện tên chữ để không mất thông tin (phần toán chiều rộng đã tính theo cột nên
+-- độ rộng thay đổi không còn gây tràn).
+-- stylua: ignore
+local PROCESS_ICONS = {
+   zsh      = nf.md_console,
+   bash     = nf.md_console,
+   sh       = nf.md_console,
+   fish     = nf.md_console,
+   tmux     = nf.cod_terminal_tmux,
+   node     = nf.md_nodejs,
+   claude   = nf.md_robot,
+   ssh      = nf.md_ssh,
+   mosh     = nf.md_ssh,
+   ['mosh-client'] = nf.md_ssh,
+   python   = nf.md_language_python,
+   python3  = nf.md_language_python,
+   git      = nf.dev_git,
+   lazygit  = nf.dev_git,
+   nvim     = nf.custom_vim,
+   vim      = nf.custom_vim,
+   docker   = nf.md_docker,
+   kubectl  = nf.md_kubernetes,
+   psql     = nf.md_database,
+   duckdb   = nf.md_database,
+   top      = nf.md_chart_areaspline,
+   htop     = nf.md_chart_areaspline,
+   btop     = nf.md_chart_areaspline,
+}
 
 local GLYPH_UNSEEN_NUMBERED_BOX = {
    [1] = nf.md_numeric_1_box_multiple, --[[ 󰼏 ]]
@@ -76,10 +113,23 @@ local GLYPH_UNSEEN_NUMBERED_CIRCLE = {
    [10] = nf.md_numeric_9_plus_circle, --[[ 󰲲 ]]
 }
 
-local TITLE_INSET = {
-   DEFAULT = 6,
-   ICON = 8,
+-- Chiều rộng hiển thị (số cột) của từng segment KHÔNG phải title, để tính chính xác
+-- phần còn lại cho title. Phải khớp với Tab:create_cells() — sửa một bên thì sửa cả hai.
+local SEGMENT_WIDTH = {
+   scircle_left = 1,
+   scircle_right = 1,
+   padding = 1,
+   title_lead = 1, -- khoảng trắng đứng trước title trong segment 'title'
+   admin = 2, -- ' ' + icon
+   wsl = 2, -- ' ' + icon
+   khanhpc = 2 + #KHANHPC_LABEL, -- ' ' + icon + nhãn
+   unseen_output = 2, -- ' ' + icon
 }
+
+local TITLE_INSET_BASE = SEGMENT_WIDTH.scircle_left
+   + SEGMENT_WIDTH.title_lead
+   + SEGMENT_WIDTH.padding
+   + SEGMENT_WIDTH.scircle_right
 
 local RENDER_VARIANTS = {
    { 'scircle_left', 'title', 'padding', 'scircle_right' },
@@ -88,29 +138,27 @@ local RENDER_VARIANTS = {
    { 'scircle_left', 'admin', 'title', 'unseen_output', 'padding', 'scircle_right' },
    { 'scircle_left', 'wsl', 'title', 'padding', 'scircle_right' },
    { 'scircle_left', 'wsl', 'title', 'unseen_output', 'padding', 'scircle_right' },
+   { 'scircle_left', 'khanhpc', 'title', 'padding', 'scircle_right' },
+   { 'scircle_left', 'khanhpc', 'title', 'unseen_output', 'padding', 'scircle_right' },
 }
 
 
 ---@type table<string, Cells.SegmentColors>
--- Enhanced color system with better contrast and accessibility (WCAG AA compliant)
+-- Màu lấy từ colors/palette.lua — không hardcode hex ở đây.
 -- stylua: ignore
 local colors = {
-   -- Improved inactive state: darker background, better text contrast
-   text_default          = { bg = '#313244', fg = '#BAC2DE' },
-   -- More pronounced hover state for better feedback
-   text_hover            = { bg = '#45475A', fg = '#CDD6F4' },
-   -- Active state: high contrast, vibrant accent
-   text_active           = { bg = '#74c7ec', fg = '#11111B' },
+   text_default          = { bg = ui.tab_bg,        fg = ui.tab_fg },
+   text_hover            = { bg = ui.tab_hover_bg,  fg = ui.tab_hover_fg },
+   text_active           = { bg = ui.tab_active_bg, fg = ui.tab_active_fg },
 
-   -- Unseen output indicators with better visibility
-   unseen_output_default = { bg = '#313244', fg = '#FAB387' },
-   unseen_output_hover   = { bg = '#45475A', fg = '#FAB387' },
-   unseen_output_active  = { bg = '#74c7ec', fg = '#F38BA8' },
+   unseen_output_default = { bg = ui.tab_bg,        fg = ui.unseen },
+   unseen_output_hover   = { bg = ui.tab_hover_bg,  fg = ui.unseen },
+   unseen_output_active  = { bg = ui.tab_active_bg, fg = ui.unseen_active },
 
-   -- Semi-circles with enhanced glassmorphism
-   scircle_default       = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#313244' },
-   scircle_hover         = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#45475A' },
-   scircle_active        = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#74C7EC' },
+   -- Nửa vòng tròn hai đầu pill: fg = màu thân pill, bg = nền kính
+   scircle_default       = { bg = ui.glass, fg = ui.tab_bg },
+   scircle_hover         = { bg = ui.glass, fg = ui.tab_hover_bg },
+   scircle_active        = { bg = ui.glass, fg = ui.tab_active_bg },
 }
 
 ---
@@ -128,34 +176,38 @@ end
 ---@param base_title string
 ---@param max_width number
 ---@param inset number
-local function create_title(process_name, base_title, max_width, inset)
+---@param tab_index number? 1-based tab number, rendered as an iTerm2-style prefix
+local function create_title(process_name, base_title, max_width, inset, tab_index)
    local title
 
    if process_name:len() > 0 then
-      title = process_name .. ' ~ ' .. base_title
+      local icon = PROCESS_ICONS[process_name]
+      title = (icon or process_name .. ' ~') .. ' ' .. base_title
    else
       title = base_title
    end
 
    if base_title == 'Debug' then
       title = GLYPH_DEBUG .. ' DEBUG'
-      inset = inset - 2
    end
 
    if base_title:match('^InputSelector:') ~= nil then
-      title = base_title:gsub('InputSelector:', GLYPH_SEARCH)
-      inset = inset - 2
+      title = base_title:gsub('InputSelector:', GLYPH_SEARCH .. ' ')
    end
 
-   if title:len() > max_width - inset then
-      local diff = title:len() - max_width + inset
-      title = title:sub(1, title:len() - diff)
-   else
-      local padding = max_width - title:len() - inset
-      title = title .. string.rep(' ', padding)
+   -- The index prefix eats into the available width, so charge it to `inset`
+   -- before the truncate/pad math to keep the rendered width at max_width.
+   local prefix = tab_index ~= nil and (tostring(tab_index) .. ' ') or ''
+
+   -- Đo bằng SỐ CỘT hiển thị, không phải số byte. Tiêu đề tiếng Việt ('à', 'ệ' = 2 byte)
+   -- hay glyph Nerd Font (3 byte) làm `:len()` đếm dư → cắt lố, pad thiếu, và `:sub()`
+   -- còn có thể cắt giữa một ký tự UTF-8 làm hỏng luôn glyph.
+   local avail = max_width - inset - wezterm.column_width(prefix)
+   if avail < 1 then
+      avail = 1
    end
 
-   return title
+   return prefix .. wezterm.pad_right(wezterm.truncate_right(title, avail), avail)
 end
 
 ---@param panes any[] WezTerm https://wezfurlong.org/wezterm/config/lua/pane/index.html
@@ -189,6 +241,7 @@ end
 ---@field locked_title string
 ---@field is_wsl boolean
 ---@field is_admin boolean
+---@field is_khanhpc boolean
 ---@field unseen_output boolean
 ---@field unseen_output_count number
 ---@field is_active boolean
@@ -203,10 +256,28 @@ function Tab:new()
       locked_title = '',
       is_wsl = false,
       is_admin = false,
+      is_khanhpc = false,
       unseen_output = false,
       unseen_output_count = 0,
    }
    return setmetatable(tab, self)
+end
+
+---Segment icon đang dùng cho tab này, hoặc nil nếu là tab thường.
+---Dùng chung cho cả phần tính inset (set_info) và phần chọn render variant (render)
+---để hai chỗ không bao giờ lệch nhau — đó chính là lỗi làm tab KhanhPC tràn width.
+---@return 'khanhpc'|'wsl'|'admin'|nil
+function Tab:icon_segment()
+   if self.is_khanhpc then
+      return 'khanhpc'
+   end
+   if self.is_wsl then
+      return 'wsl'
+   end
+   if self.is_admin then
+      return 'admin'
+   end
+   return nil
 end
 
 ---@param event_opts Event.TabTitleOptions
@@ -214,10 +285,23 @@ end
 ---@param max_width number
 function Tab:set_info(event_opts, tab, max_width)
    local process_name = clean_process_name(tab.active_pane.foreground_process_name)
+   -- `tab.active_pane` trong event này là PaneInformation, KHÔNG phải Pane:
+   -- nó chỉ có field `domain_name`, không có method `get_domain_name()`.
+   -- Gọi sai method làm cả handler throw → wezterm bỏ toàn bộ theme tab và
+   -- rơi về tab bar mặc định (log cũ có 30k lần lỗi này).
+   local domain_name = tab.active_pane.domain_name or ''
+   local pane_title = tab.active_pane.title or ''
 
    self.is_wsl = process_name:match('^wsl') ~= nil
    self.is_admin = (
-      tab.active_pane.title:match('^Administrator: ') or tab.active_pane.title:match('(Admin)')
+      pane_title:match('^Administrator: ') or pane_title:match('(Admin)')
+   ) ~= nil
+   -- Detect khanhpc by domain name or pane title
+   self.is_khanhpc = (
+      domain_name == 'khanhpc' or
+      pane_title:match('khanhpc') or
+      pane_title:match('akatekhanh@') or
+      pane_title:match('100%.69%.140%.48')
    ) ~= nil
    self.unseen_output = false
    self.unseen_output_count = 0
@@ -226,16 +310,22 @@ function Tab:set_info(event_opts, tab, max_width)
       self.unseen_output, self.unseen_output_count = check_unseen_output(tab.panes)
    end
 
-   local inset = (self.is_admin or self.is_wsl) and TITLE_INSET.ICON or TITLE_INSET.DEFAULT
+   local inset = TITLE_INSET_BASE
+   local icon = self:icon_segment()
+   if icon then
+      inset = inset + SEGMENT_WIDTH[icon]
+   end
    if self.unseen_output then
-      inset = inset + 2
+      inset = inset + SEGMENT_WIDTH.unseen_output
    end
 
+   local tab_index = tab.tab_index + 1
+
    if self.title_locked then
-      self.title = create_title('', self.locked_title, max_width, inset)
+      self.title = create_title('', self.locked_title, max_width, inset, tab_index)
       return
    end
-   self.title = create_title(process_name, tab.active_pane.title, max_width, inset)
+   self.title = create_title(process_name, pane_title, max_width, inset, tab_index)
 end
 
 function Tab:create_cells()
@@ -244,6 +334,7 @@ function Tab:create_cells()
       :add_segment('scircle_left', GLYPH_SCIRCLE_LEFT)
       :add_segment('admin', ' ' .. GLYPH_ADMIN)
       :add_segment('wsl', ' ' .. GLYPH_LINUX)
+      :add_segment('khanhpc', ' ' .. GLYPH_KHANHPC .. KHANHPC_LABEL)
       :add_segment('title', ' ', nil, attr(attr.intensity('Bold')))
       :add_segment('unseen_output', ' ' .. GLYPH_CIRCLE)
       :add_segment('padding', ' ')
@@ -286,6 +377,7 @@ function Tab:update_cells(event_opts, is_active, hover)
       :update_segment_colors('scircle_left', colors['scircle_' .. tab_state])
       :update_segment_colors('admin', colors['text_' .. tab_state])
       :update_segment_colors('wsl', colors['text_' .. tab_state])
+      :update_segment_colors('khanhpc', { bg = ui.alert_bg, fg = ui.alert_fg })
       :update_segment_colors('title', colors['text_' .. tab_state])
       :update_segment_colors('unseen_output', colors['unseen_output_' .. tab_state])
       :update_segment_colors('padding', colors['text_' .. tab_state])
@@ -294,9 +386,14 @@ end
 
 ---@return FormatItem[] (ref: https://wezfurlong.org/wezterm/config/lua/wezterm/format.html)
 function Tab:render()
-   local variant_idx = self.is_admin and 3 or 1
-   if self.is_wsl then
+   local icon = self:icon_segment()
+   local variant_idx = 1
+   if icon == 'admin' then
+      variant_idx = 3
+   elseif icon == 'wsl' then
       variant_idx = 5
+   elseif icon == 'khanhpc' then
+      variant_idx = 7
    end
 
    if self.unseen_output then
