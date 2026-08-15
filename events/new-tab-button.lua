@@ -2,6 +2,7 @@ local wezterm = require('wezterm')
 local launch_menu = require('config.launch').launch_menu
 local domains = require('config.domains')
 local Cells = require('utils.cells')
+local ui = require('colors.palette').ui
 
 local nf = wezterm.nerdfonts
 local act = wezterm.action
@@ -10,14 +11,14 @@ local attr = Cells.attr
 local M = {}
 
 ---@type table<string, Cells.SegmentColors>
--- Enhanced color system with modern accents and better hierarchy
+-- Màu lấy từ colors/palette.lua — không hardcode hex ở đây.
 -- stylua: ignore
 local colors = {
-   label_text   = { fg = '#CDD6F4' },
-   icon_default = { fg = '#74c7ec' },  -- Sky blue - more vibrant
-   icon_wsl     = { fg = '#FAB387' },  -- Peach
-   icon_ssh     = { fg = '#F38BA8' },  -- Red/Pink
-   icon_unix    = { fg = '#A6E3A1' },  -- Green - better for Unix theme
+   label_text   = { fg = ui.label },
+   icon_default = { fg = ui.icon_default },
+   icon_wsl     = { fg = ui.icon_wsl },
+   icon_ssh     = { fg = ui.icon_ssh },
+   icon_unix    = { fg = ui.icon_unix },
 }
 
 local cells = Cells:new()

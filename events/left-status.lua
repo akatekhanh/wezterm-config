@@ -1,5 +1,6 @@
 local wezterm = require('wezterm')
 local Cells = require('utils.cells')
+local ui = require('colors.palette').ui
 
 local nf = wezterm.nerdfonts
 local attr = Cells.attr
@@ -13,25 +14,29 @@ local GLYPH_KEY_TABLE = nf.md_table_key --[[ '󱏅' ]]
 local GLYPH_KEY = nf.md_key --[[ '󰌆' ]]
 local GLYPH_GIT_BRANCH = nf.dev_git_branch --[[ '' ]]
 local GLYPH_FOLDER = nf.md_folder --[[ '󰉋' ]]
+local GLYPH_PANES = nf.md_view_grid --[[ '󰕰' ]]
 local GLYPH_SEPARATOR = nf.ple_left_half_circle_thin --[[ '' ]]
 
 ---@type table<string, Cells.SegmentColors>
--- Enhanced color system with better hierarchy
+-- Màu lấy từ colors/palette.lua — không hardcode hex ở đây.
 local colors = {
-   -- Key table colors (highest priority - warm accent)
-   key_bg = { bg = '#fab387', fg = '#1c1b19' },
-   key_scircle = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#fab387' },
+   -- Key table (ưu tiên cao nhất - accent ấm)
+   key_bg = { bg = ui.accent_key, fg = ui.on_accent },
+   key_scircle = { bg = ui.glass, fg = ui.accent_key },
 
-   -- Git branch colors (secondary - cool accent)
-   git_bg = { bg = '#a6e3a1', fg = '#1c1b19' },
-   git_scircle = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#a6e3a1' },
+   -- Git branch (ưu tiên hai - accent lạnh)
+   git_bg = { bg = ui.accent_git, fg = ui.on_accent },
+   git_scircle = { bg = ui.glass, fg = ui.accent_git },
 
-   -- Directory colors (tertiary - muted)
-   dir_bg = { bg = '#45475a', fg = '#cdd6f4' },
-   dir_scircle = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#45475a' },
+   -- Thư mục hiện tại (ưu tiên ba - nền trầm)
+   dir_bg = { bg = ui.dir_bg, fg = ui.dir_fg },
+   dir_scircle = { bg = ui.glass, fg = ui.dir_bg },
 
-   -- Separator
-   separator = { bg = 'rgba(0, 0, 0, 0.5)', fg = '#6c7086' },
+   -- Số pane trong window
+   panes_bg = { bg = ui.accent_panes, fg = ui.on_accent },
+   panes_scircle = { bg = ui.glass, fg = ui.accent_panes },
+
+   separator = { bg = ui.glass, fg = ui.separator },
 }
 
 local cells = Cells:new()
@@ -57,6 +62,20 @@ cells
    :add_segment('dir_icon', ' ' .. GLYPH_FOLDER, colors.dir_bg)
    :add_segment('dir_text', ' ', colors.dir_bg)
    :add_segment('dir_right', GLYPH_SEMI_CIRCLE_RIGHT, colors.dir_scircle)
+   -- Separator
+   :add_segment('separator3', ' ' .. GLYPH_SEPARATOR .. ' ', colors.separator)
+   -- Số pane trong window
+   :add_segment('panes_left', GLYPH_SEMI_CIRCLE_LEFT, colors.panes_scircle)
+   :add_segment('panes_icon', ' ' .. GLYPH_PANES, colors.panes_bg)
+   :add_segment('panes_text', ' ', colors.panes_bg, attr(attr.intensity('Bold')))
+   :add_segment('panes_right', GLYPH_SEMI_CIRCLE_RIGHT, colors.panes_scircle)
+
+-- Cache nhánh git theo cwd. `update-right-status` chạy mỗi status_update_interval
+-- (1s), mà spawn git mỗi giây thì vô ích: nhánh gần như không đổi, còn trên repo lớn
+-- hoặc mount mạng thì nó chặn luôn lua thread. Cache cả kết quả âm (không phải repo)
+-- để thư mục thường không bị gọi git liên tục. Đổi cwd là key đổi → cập nhật ngay.
+local GIT_CACHE_TTL = 5
+local git_cache = {}
 
 ---Get current git branch
 ---@param pane any
@@ -68,14 +87,36 @@ local function get_git_branch(pane)
    end
 
    local cwd_path = cwd.file_path or ''
-   local success, stdout = pcall(function()
-      return io.popen('cd "' .. cwd_path .. '" 2>/dev/null && git branch --show-current 2>/dev/null'):read('*a')
-   end)
-
-   if success and stdout and stdout ~= '' then
-      return stdout:gsub('%s+', '')
+   if cwd_path == '' then
+      return nil
    end
-   return nil
+
+   local now = os.time()
+   local hit = git_cache[cwd_path]
+   if hit and now - hit.at < GIT_CACHE_TTL then
+      return hit.branch
+   end
+
+   -- run_child_process thay vì io.popen: không qua shell (thư mục có `"` hay `$(`
+   -- không còn làm vỡ/inject lệnh) và không để rơi file handle chưa close.
+   local ok, stdout = wezterm.run_child_process({
+      'git',
+      '-C',
+      cwd_path,
+      'branch',
+      '--show-current',
+   })
+
+   local branch = nil
+   if ok and stdout then
+      branch = stdout:gsub('%s+$', '')
+      if branch == '' then
+         branch = nil
+      end
+   end
+
+   git_cache[cwd_path] = { branch = branch, at = now }
+   return branch
 end
 
 ---Get current directory name (shortened)
@@ -104,6 +145,31 @@ local function get_current_dir(pane)
    end
 
    return dir_name
+end
+
+---Đếm pane: trong tab đang xem và trong toàn bộ window.
+---Chỉ là các lời gọi mux trong lua, không spawn process nào → chạy mỗi giây vẫn rẻ.
+---@param window any WezTerm `Window`
+---@return number panes_in_tab, number panes_in_window, number tab_count
+local function count_panes(window)
+   local mux_win = window:mux_window()
+   local active_tab_id = nil
+   local active = window:active_tab()
+   if active then
+      active_tab_id = active:tab_id()
+   end
+
+   local in_tab, in_window, tabs = 0, 0, 0
+   for _, tab in ipairs(mux_win:tabs()) do
+      local n = #tab:panes()
+      in_window = in_window + n
+      tabs = tabs + 1
+      if tab:tab_id() == active_tab_id then
+         in_tab = n
+      end
+   end
+
+   return in_tab, in_window, tabs
 end
 
 M.setup = function()
@@ -151,6 +217,21 @@ M.setup = function()
       table.insert(segments_to_render, 'dir_icon')
       table.insert(segments_to_render, 'dir_text')
       table.insert(segments_to_render, 'dir_right')
+
+      -- Số pane. Dạng "2/5" = pane trong tab đang xem / tổng pane trong window;
+      -- window chỉ có 1 tab thì hai số trùng nhau nên chỉ hiện một số.
+      local panes_in_tab, panes_in_window = count_panes(window)
+      if panes_in_window > 0 then
+         local panes_text = panes_in_tab == panes_in_window
+            and tostring(panes_in_window)
+            or (panes_in_tab .. '/' .. panes_in_window)
+         cells:update_segment_text('panes_text', ' ' .. panes_text .. ' ')
+         table.insert(segments_to_render, 'separator3')
+         table.insert(segments_to_render, 'panes_left')
+         table.insert(segments_to_render, 'panes_icon')
+         table.insert(segments_to_render, 'panes_text')
+         table.insert(segments_to_render, 'panes_right')
+      end
 
       -- Render all visible segments
       if #segments_to_render > 0 then

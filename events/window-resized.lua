@@ -10,32 +10,12 @@ M.setup = function()
 
       -- Only reapply if we have backdrop images loaded
       if #backdrops.images > 0 then
-         if backdrops.focus_on then
-            overrides.background = {
-               {
-                  source = { Color = backdrops.focus_color },
-                  height = '120%',
-                  width = '120%',
-                  vertical_offset = '-10%',
-                  horizontal_offset = '-10%',
-                  opacity = 1,
-               },
-            }
-         else
-            overrides.background = {
-               {
-                  source = { File = backdrops.images[backdrops.current_idx] },
-                  horizontal_align = 'Center',
-                  vertical_align = 'Middle',
-                  width = '100%',
-                  height = '100%',
-                  repeat_x = 'NoRepeat',
-                  repeat_y = 'NoRepeat',
-                  opacity = 0.3,
-               },
-            }
-         end
-
+         -- Dùng lại đúng options của backdrops thay vì tự viết lại bảng layer.
+         -- Bản tự viết trước đây khác hẳn (width/height '100%' làm méo tỉ lệ ảnh,
+         -- opacity 0.3 thay vì 0.18, thiếu hsb dimming, thiếu lớp nền đục) nên mỗi lần
+         -- window resize — kể cả lúc mở window mới — background nhảy sang bản sáng hơn
+         -- và trong suốt hơn.
+         overrides.background = backdrops:current_options()
          window:set_config_overrides(overrides)
       end
    end)

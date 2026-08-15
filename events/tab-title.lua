@@ -420,7 +420,7 @@ M.setup = function(opts)
       window:perform_action(
          wezterm.action.PromptInputLine({
             description = wezterm.format({
-               { Foreground = { Color = '#FFFFFF' } },
+               { Foreground = { Color = ui.label } },
                { Attribute = { Intensity = 'Bold' } },
                { Text = 'Enter new name for tab' },
             }),

@@ -79,11 +79,35 @@ function BackDrops:set_focus(focus_color)
    return self
 end
 
+---Lớp nền ĐỤC nằm dưới ảnh.
+---Không có lớp này thì background chỉ gồm ảnh ở opacity 0.18, tức 82% trong suốt:
+---hạ window_background_opacity xuống dưới 1 là desktop lòi xuyên qua terminal và chữ
+---mất tương phản. Có lớp này thì độ trong suốt do window_background_opacity quyết định
+---một cách đồng đều, và ảnh vẫn giữ nguyên mức mờ 0.18 so với nền.
+---@private
+---@return table
+function BackDrops:_base_layer()
+   return {
+      source = { Color = colors.background },
+      width = '100%',
+      height = '100%',
+      opacity = 1,
+   }
+end
+
 ---Create the `background` options with the current image
 ---@private
 ---@return table
 function BackDrops:_create_opts()
+   -- Không có ảnh nào (thư mục backdrops rỗng, hoặc wezterm.glob() không chạy được
+   -- ngoài GUI) thì chỉ trả lớp nền đục. Nếu vẫn tạo layer ảnh thì source thành
+   -- `{ File = nil }` = bảng rỗng, và wezterm báo "Expected a valid BackgroundSource".
+   if not self.images[self.current_idx] then
+      return { self:_base_layer() }
+   end
+
    return {
+      self:_base_layer(),
       {
          source = { File = self.images[self.current_idx] },
          horizontal_align = 'Center',
@@ -118,6 +142,19 @@ function BackDrops:_create_focus_opts()
    }
 end
 
+---Background options ứng với trạng thái hiện tại (focus mode hay ảnh).
+---MỌI nơi cần đặt lại background phải dùng hàm này, đừng tự viết lại bảng layer —
+---trước đây events/window-resized.lua tự định nghĩa một bản khác (100% thay vì Cover,
+---opacity 0.3, không có hsb dimming) nên background nhảy sang bản sáng hơn và bị méo
+---tỉ lệ mỗi lần window resize.
+---@return table
+function BackDrops:current_options()
+   if self.focus_on then
+      return self:_create_focus_opts()
+   end
+   return self:_create_opts()
+end
+
 ---Set the initial options for `background`
 ---@param focus_on boolean? focus mode on or off
 function BackDrops:initial_options(focus_on)
@@ -125,11 +162,7 @@ function BackDrops:initial_options(focus_on)
    assert(type(focus_on) == 'boolean', 'BackDrops:initial_options - Expected a boolean')
 
    self.focus_on = focus_on
-   if focus_on then
-      return self:_create_focus_opts()
-   end
-
-   return self:_create_opts()
+   return self:current_options()
 end
 
 ---Override the current window options for background

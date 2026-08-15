@@ -62,6 +62,7 @@ local ui = {
    -- Accent của từng nhóm thông tin trên status bar
    accent_key     = mocha.peach,   -- key table / LEADER
    accent_git     = mocha.green,
+   accent_panes   = mocha.teal,    -- số pane trong window
    accent_cpu     = mocha.red,
    accent_mem     = mocha.mauve,
    accent_battery = mocha.yellow,

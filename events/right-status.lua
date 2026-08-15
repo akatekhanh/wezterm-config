@@ -2,6 +2,7 @@ local wezterm = require('wezterm')
 local umath = require('utils.math')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
+local ui = require('colors.palette').ui
 
 ---@alias Event.RightStatusOptions { date_format?: string, show_cpu?: boolean, show_memory?: boolean }
 
@@ -69,27 +70,22 @@ local charging_icons = {
 }
 
 ---@type table<string, Cells.SegmentColors>
--- Enhanced color system with visual hierarchy
+-- Màu lấy từ colors/palette.lua — không hardcode hex ở đây.
 -- stylua: ignore
 local colors = {
-   -- CPU (high priority - performance indicator)
-   cpu        = { fg = '#f38ba8', bg = 'rgba(0, 0, 0, 0.5)' },
-   cpu_circle = { fg = '#f38ba8', bg = 'rgba(0, 0, 0, 0.5)' },
+   cpu           = { fg = ui.accent_cpu,     bg = ui.glass },
+   cpu_circle    = { fg = ui.accent_cpu,     bg = ui.glass },
 
-   -- Memory (medium-high priority)
-   memory        = { fg = '#cba6f7', bg = 'rgba(0, 0, 0, 0.5)' },
-   memory_circle = { fg = '#cba6f7', bg = 'rgba(0, 0, 0, 0.5)' },
+   memory        = { fg = ui.accent_mem,     bg = ui.glass },
+   memory_circle = { fg = ui.accent_mem,     bg = ui.glass },
 
-   -- Battery (medium priority)
-   battery        = { fg = '#f9e2af', bg = 'rgba(0, 0, 0, 0.5)' },
-   battery_circle = { fg = '#f9e2af', bg = 'rgba(0, 0, 0, 0.5)' },
+   battery       = { fg = ui.accent_battery, bg = ui.glass },
+   battery_circle= { fg = ui.accent_battery, bg = ui.glass },
 
-   -- Date/Time (standard priority)
-   date        = { fg = '#89dceb', bg = 'rgba(0, 0, 0, 0.5)' },
-   date_circle = { fg = '#89dceb', bg = 'rgba(0, 0, 0, 0.5)' },
+   date          = { fg = ui.accent_date,    bg = ui.glass },
+   date_circle   = { fg = ui.accent_date,    bg = ui.glass },
 
-   -- Separators
-   separator = { fg = '#6c7086', bg = 'rgba(0, 0, 0, 0.5)' }
+   separator     = { fg = ui.separator,      bg = ui.glass },
 }
 
 local cells = Cells:new()
@@ -144,93 +140,105 @@ local function battery_info()
    return charge, icon .. ' '
 end
 
----Get CPU usage percentage (cross-platform)
+-- Cache cho các chỉ số hệ thống. `update-right-status` chạy mỗi giây, mà đo hệ thống
+-- bằng io.popen là ĐỒNG BỘ: nó chặn lua thread đúng bằng thời gian lệnh chạy.
+-- Bản cũ gọi `top -l 1` (đo được 0,69s/lần!) mỗi giây → chặn ~70% thời gian.
+local METRIC_TTL = 5
+local metric_cache = {}
+
+---Đọc chỉ số có cache, dùng run_child_process (không qua shell, không rơi file handle)
+---@param key string
+---@param argv string[]
+---@param parse fun(stdout: string): string|nil
+---@return string|nil
+local function cached_metric(key, argv, parse)
+   local now = os.time()
+   local hit = metric_cache[key]
+   if hit and now - hit.at < METRIC_TTL then
+      return hit.value
+   end
+
+   local value = nil
+   local ok, stdout = wezterm.run_child_process(argv)
+   if ok and stdout then
+      local parsed_ok, parsed = pcall(parse, stdout)
+      if parsed_ok then
+         value = parsed
+      end
+   end
+
+   metric_cache[key] = { value = value, at = now }
+   return value
+end
+
+---Tải hệ thống (load average 1 phút), KHÔNG phải %CPU tức thời.
+---Đây là đánh đổi có chủ ý: `sysctl -n vm.loadavg` mất 0,002s, còn cách duy nhất lấy
+---%CPU tức thời trên macOS (`top -l 1`) mất 0,69s và sẽ chặn UI mỗi giây.
 ---@return string|nil
 local function get_cpu_usage()
    local platform = require('utils.platform')
-   local success, result
 
-   if platform.is_mac or platform.is_linux then
-      success, result = pcall(function()
-         local handle = io.popen("top -l 1 | grep 'CPU usage' | awk '{print $3}' | sed 's/%//' 2>/dev/null || ps -A -o %cpu | awk '{s+=$1} END {print s}'")
-         if handle then
-            local output = handle:read('*a')
-            handle:close()
-            return output
-         end
-         return nil
+   if platform.is_mac then
+      return cached_metric('load', { 'sysctl', '-n', 'vm.loadavg' }, function(out)
+         -- dạng: "{ 5.89 5.89 6.06 }"
+         local one_min = out:match('{%s*([%d%.]+)')
+         return one_min and string.format('%.2f', tonumber(one_min)) or nil
+      end)
+   elseif platform.is_linux then
+      return cached_metric('load', { 'cat', '/proc/loadavg' }, function(out)
+         local one_min = out:match('^([%d%.]+)')
+         return one_min and string.format('%.2f', tonumber(one_min)) or nil
       end)
    elseif platform.is_win then
-      success, result = pcall(function()
-         local handle = io.popen('wmic cpu get loadpercentage /value 2>nul')
-         if handle then
-            local output = handle:read('*a')
-            handle:close()
-            return output:match('LoadPercentage=(%d+)')
+      return cached_metric(
+         'load',
+         { 'wmic', 'cpu', 'get', 'loadpercentage', '/value' },
+         function(out)
+            local pct = out:match('LoadPercentage=(%d+)')
+            return pct and (pct .. '%') or nil
          end
-         return nil
-      end)
+      )
    end
 
-   if success and result and result ~= '' then
-      local cpu = tonumber(result:gsub('%s+', ''))
-      if cpu then
-         return string.format('%d%%', math.floor(cpu))
-      end
-   end
    return nil
 end
 
----Get memory usage (cross-platform)
+---Phần trăm RAM đang dùng (có cache, không qua shell)
 ---@return string|nil
 local function get_memory_usage()
    local platform = require('utils.platform')
-   local success, result
 
    if platform.is_mac then
-      success, result = pcall(function()
-         local handle = io.popen("memory_pressure | grep 'System-wide memory free percentage:' | awk '{print 100-$5}' 2>/dev/null")
-         if handle then
-            local output = handle:read('*a')
-            handle:close()
-            return output
-         end
-         return nil
+      return cached_metric('mem', { 'memory_pressure' }, function(out)
+         -- dạng: "System-wide memory free percentage: 40%"
+         local free = out:match('System%-wide memory free percentage:%s*(%d+)')
+         return free and string.format('%d%%', 100 - tonumber(free)) or nil
       end)
    elseif platform.is_linux then
-      success, result = pcall(function()
-         local handle = io.popen("free | grep Mem | awk '{print ($3/$2) * 100.0}'")
-         if handle then
-            local output = handle:read('*a')
-            handle:close()
-            return output
+      return cached_metric('mem', { 'free' }, function(out)
+         local total, used = out:match('Mem:%s+(%d+)%s+(%d+)')
+         if total and tonumber(total) > 0 then
+            return string.format('%d%%', math.floor(used / total * 100))
          end
          return nil
       end)
    elseif platform.is_win then
-      success, result = pcall(function()
-         local handle =
-            io.popen('wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value 2>nul')
-         if handle then
-            local output = handle:read('*a')
-            handle:close()
-            local free = output:match('FreePhysicalMemory=(%d+)')
-            local total = output:match('TotalVisibleMemorySize=(%d+)')
-            if free and total then
-               local used_percent = ((tonumber(total) - tonumber(free)) / tonumber(total)) * 100
-               return tostring(used_percent)
-            end
+      return cached_metric('mem', {
+         'wmic',
+         'OS',
+         'get',
+         'FreePhysicalMemory,TotalVisibleMemorySize',
+         '/Value',
+      }, function(out)
+         local free = out:match('FreePhysicalMemory=(%d+)')
+         local total = out:match('TotalVisibleMemorySize=(%d+)')
+         if free and total and tonumber(total) > 0 then
+            return string.format('%d%%', math.floor((total - free) / total * 100))
          end
          return nil
       end)
    end
 
-   if success and result and result ~= '' then
-      local mem = tonumber(result:gsub('%s+', ''))
-      if mem then
-         return string.format('%d%%', math.floor(mem))
-      end
-   end
    return nil
 end
 
