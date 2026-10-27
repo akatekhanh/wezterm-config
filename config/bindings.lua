@@ -99,7 +99,7 @@ local keys = {
          end)
       end),
    },
-   { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
+   { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = true }) },
 
    -- tabs: navigation
    { key = '[',          mods = mod.SUPER,     action = act.ActivateTabRelative(-1) },
@@ -119,10 +119,10 @@ local keys = {
    -- window: spawn windows
    { key = 'n',          mods = mod.SUPER,     action = act.SpawnWindow },
 
-   -- window: zoom window
+   -- window: zoom window (SUPER -/= is font size below)
    {
       key = '-',
-      mods = mod.SUPER,
+      mods = mod.SUPER_REV,
       action = wezterm.action_callback(function(window, _pane)
          local dimensions = window:get_dimensions()
          if dimensions.is_full_screen then
@@ -135,7 +135,7 @@ local keys = {
    },
    {
       key = '=',
-      mods = mod.SUPER,
+      mods = mod.SUPER_REV,
       action = wezterm.action_callback(function(window, _pane)
          local dimensions = window:get_dimensions()
          if dimensions.is_full_screen then
@@ -146,6 +146,11 @@ local keys = {
          window:set_inner_size(new_width, new_height)
       end)
    },
+
+   -- font size (direct; leader SUPER_REV+Space is eaten by macOS emoji picker)
+   { key = '-', mods = mod.SUPER,     action = act.DecreaseFontSize },
+   { key = '=', mods = mod.SUPER,     action = act.IncreaseFontSize },
+   { key = 'r', mods = mod.SUPER_REV, action = act.ResetFontSize },
 
    -- background controls --
    {
