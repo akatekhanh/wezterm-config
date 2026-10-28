@@ -29,6 +29,13 @@ function BackDrops:init()
       images_dir = wezterm.config_dir .. '/backdrops/',
       focus_color = colors.background,
       focus_on = false,
+      -- Độ rõ của ảnh nền. Trước đây hardcode opacity 0.18 + brightness 0.5 → ảnh mờ
+      -- và tối, gần như chỉ còn là vệt màu. Chỉnh trong wezterm.lua qua :set_image_style().
+      image_style = {
+         opacity = 0.35,
+         brightness = 0.7,
+         saturation = 0.9,
+      },
    }
    local backdrops = setmetatable(inital, self)
    return backdrops
@@ -83,7 +90,7 @@ end
 ---Không có lớp này thì background chỉ gồm ảnh ở opacity 0.18, tức 82% trong suốt:
 ---hạ window_background_opacity xuống dưới 1 là desktop lòi xuyên qua terminal và chữ
 ---mất tương phản. Có lớp này thì độ trong suốt do window_background_opacity quyết định
----một cách đồng đều, và ảnh vẫn giữ nguyên mức mờ 0.18 so với nền.
+---một cách đồng đều, và ảnh giữ mức mờ theo image_style (mặc định opacity 0.35).
 ---@private
 ---@return table
 function BackDrops:_base_layer()
@@ -93,6 +100,22 @@ function BackDrops:_base_layer()
       height = '100%',
       opacity = 1,
    }
+end
+
+---Chỉnh độ rõ của ảnh nền (gọi trong wezterm.lua, trước :set_images()).
+---  opacity    0..1  — 1 là ảnh rõ hoàn toàn, chữ khó đọc trên vùng sáng của ảnh
+---  brightness 0..1+ — 1 là giữ nguyên độ sáng, < 1 tối đi
+---  saturation 0..1+ — 1 là giữ nguyên màu
+---Thiếu trường nào thì giữ giá trị hiện tại.
+---@param style { opacity?: number, brightness?: number, saturation?: number }
+---@return BackDrops
+function BackDrops:set_image_style(style)
+   for k, v in pairs(style or {}) do
+      if self.image_style[k] ~= nil and type(v) == 'number' then
+         self.image_style[k] = v
+      end
+   end
+   return self
 end
 
 ---Create the `background` options with the current image
@@ -119,9 +142,13 @@ function BackDrops:_create_opts()
          height = 'Cover',
          repeat_x = 'NoRepeat',
          repeat_y = 'NoRepeat',
-         -- Dimmed so bright backdrops don't fight with text/diff highlights
-         hsb = { brightness = 0.5, hue = 1.0, saturation = 0.9 },
-         opacity = 0.18,
+         -- Làm dịu để ảnh sáng không tranh với chữ / diff highlight; số lấy từ image_style
+         hsb = {
+            brightness = self.image_style.brightness,
+            hue = 1.0,
+            saturation = self.image_style.saturation,
+         },
+         opacity = self.image_style.opacity,
       },
    }
 end
@@ -222,6 +249,26 @@ function BackDrops:random(window)
    if window ~= nil then
       self:_set_opt(window, self:_create_opts())
    end
+end
+
+---Chọn ảnh theo chỉ số (1-based). Dùng cho events/project-backdrop.lua: mỗi tmux session
+---(project) map cố định sang một ảnh. Không đổi gì nếu đã đúng ảnh đó.
+---@param window any WezTerm `Window`
+---@param idx number
+---@return boolean changed
+function BackDrops:set_index(window, idx)
+   if #self.images == 0 then
+      return false
+   end
+   idx = ((idx - 1) % #self.images) + 1
+   if idx == self.current_idx then
+      return false
+   end
+   self.current_idx = idx
+   if window ~= nil then
+      self:_set_opt(window, self:_create_opts())
+   end
+   return true
 end
 
 ---Cycle the loaded `files` and select the next background

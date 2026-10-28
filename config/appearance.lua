@@ -51,7 +51,11 @@ return {
    initial_rows = 35,
    initial_cols = 100,
    adjust_window_size_when_changing_font_size = false,
-   window_close_confirmation = 'NeverPrompt',
+   -- Đóng tab / cửa sổ phải xác nhận. Lưu ý: wezterm mặc định BỎ QUA xác nhận khi
+   -- tiến trình trong pane là shell hoặc tmux (skip_close_confirmation_for_processes_named),
+   -- mà tab ở đây toàn chạy tmux, nên phải xoá danh sách đó thì mới thật sự hỏi.
+   window_close_confirmation = 'AlwaysPrompt',
+   skip_close_confirmation_for_processes_named = {},
 
    -- Prevent full screen by default
    window_decorations = 'RESIZE',

@@ -3,6 +3,7 @@ local umath = require('utils.math')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
 local ui = require('colors.palette').ui
+local layout = require('utils.tabbar-layout')
 
 ---@alias Event.RightStatusOptions { date_format?: string, show_cpu?: boolean, show_memory?: boolean }
 
@@ -127,16 +128,31 @@ local function battery_info()
    local icon = ''
 
    for _, b in ipairs(wezterm.battery_info()) do
-      local idx = umath.clamp(umath.round(b.state_of_charge * 10), 1, 10)
-      charge = string.format('%.0f%%', b.state_of_charge * 100)
+      local soc = b.state_of_charge
+      -- Mac mini (không có pin) vẫn trả về một "pin ảo": state = 'Empty',
+      -- state_of_charge = NaN. round(NaN) → tra bảng icon bằng NaN → nil → `icon .. ' '`
+      -- ném lỗi và cả handler update-right-status chết → right status (giờ/ngày)
+      -- không bao giờ hiện. (Log ghi ~15k lần lỗi này trong một buổi sáng.)
+      if type(soc) ~= 'number' or soc ~= soc or soc < 0 or soc > 1 then
+         goto continue
+      end
+
+      local idx = umath.clamp(umath.round(soc * 10), 1, 10)
+      charge = string.format('%.0f%%', soc * 100)
 
       if b.state == 'Charging' then
          icon = charging_icons[idx]
       else
          icon = discharging_icons[idx]
       end
+      icon = icon or nf.md_battery_unknown
+
+      ::continue::
    end
 
+   if charge == '' then
+      return '', ''
+   end
    return charge, icon .. ' '
 end
 
@@ -298,8 +314,10 @@ M.setup = function(opts)
       table.insert(segments_to_render, 'date_text')
       table.insert(segments_to_render, 'date_right')
 
-      -- Render
-      window:set_right_status(wezterm.format(cells:render(segments_to_render)))
+      -- Render. Ghi lại độ rộng để tab-title chia chỗ cho tab (xem utils/tabbar-layout.lua)
+      local items = cells:render(segments_to_render)
+      layout.set_right(items)
+      window:set_right_status(wezterm.format(items))
    end)
 end
 

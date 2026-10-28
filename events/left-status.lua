@@ -1,6 +1,7 @@
 local wezterm = require('wezterm')
 local Cells = require('utils.cells')
 local ui = require('colors.palette').ui
+local layout = require('utils.tabbar-layout')
 
 local nf = wezterm.nerdfonts
 local attr = Cells.attr
@@ -139,10 +140,8 @@ local function get_current_dir(pane)
    -- Get only the last directory name
    local dir_name = cwd_path:match('[^/\\]+$') or cwd_path
 
-   -- Limit length
-   if #dir_name > 20 then
-      dir_name = dir_name:sub(1, 17) .. '...'
-   end
+   -- Cắt độ dài ở handler (shorten) theo số cột còn trống, không cắt theo byte ở đây:
+   -- tên thư mục tiếng Việt `:sub()` có thể cắt giữa một ký tự UTF-8.
 
    return dir_name
 end
@@ -172,9 +171,46 @@ local function count_panes(window)
    return in_tab, in_window, tabs
 end
 
+---Độ rộng (cột) của một nhóm segment.
+---@param ids string[]
+---@return number
+local function width_of(ids)
+   return layout.items_width(cells:render(ids))
+end
+
+---Cắt `text` còn tối đa `max` cột, thêm '…' nếu bị cắt.
+---@param text string
+---@param max number
+---@return string
+local function shorten(text, max)
+   if wezterm.column_width(text) <= max then
+      return text
+   end
+   if max <= 1 then
+      return '…'
+   end
+   return wezterm.truncate_right(text, max - 1) .. '…'
+end
+
+local GIT_MIN_CHARS = 6
+local DIR_MIN_CHARS = 4
+local SEPARATOR_WIDTH = 3 -- ' ' + glyph + ' '
+
 M.setup = function()
    wezterm.on('update-right-status', function(window, pane)
-      local segments_to_render = {}
+      layout.update_from_window(window)
+
+      local panes_in_tab, panes_in_window, tab_count = count_panes(window)
+
+      -- Left status đổi theo tab đang active (git branch, tên thư mục) nên nếu để nó
+      -- muốn rộng bao nhiêu cũng được thì mỗi lần chuyển tab cả dãy tab lại co giãn.
+      -- Thay vào đó: tab giữ độ rộng cố định, left status chỉ được dùng phần còn dư
+      -- (`budget`) — thiếu chỗ thì rút ngắn tên thư mục, rồi bỏ hẳn git branch.
+      local tab_max_width = window:effective_config().tab_max_width
+      local budget = layout.left_budget(tab_max_width, tab_count) or math.huge
+
+      local head = {} -- key table / LEADER: luôn hiện
+      local tail = {} -- số pane: luôn hiện
 
       -- Key table / Leader key indicator (highest priority)
       local key_table = window:active_key_table()
@@ -188,55 +224,68 @@ M.setup = function()
             cells:update_segment_text('key_icon', ' ' .. GLYPH_KEY_TABLE)
             cells:update_segment_text('key_text', ' ' .. string.upper(key_table) .. ' ')
          end
-         table.insert(segments_to_render, 'key_left')
-         table.insert(segments_to_render, 'key_icon')
-         table.insert(segments_to_render, 'key_text')
-         table.insert(segments_to_render, 'key_right')
-         table.insert(segments_to_render, 'separator1')
+         head = { 'key_left', 'key_icon', 'key_text', 'key_right', 'separator1' }
       end
-
-      -- Git branch (secondary priority)
-      local git_branch = get_git_branch(pane)
-      if git_branch then
-         local branch_text = git_branch
-         if #branch_text > 25 then
-            branch_text = branch_text:sub(1, 22) .. '...'
-         end
-         cells:update_segment_text('git_text', ' ' .. branch_text .. ' ')
-         table.insert(segments_to_render, 'git_left')
-         table.insert(segments_to_render, 'git_icon')
-         table.insert(segments_to_render, 'git_text')
-         table.insert(segments_to_render, 'git_right')
-         table.insert(segments_to_render, 'separator2')
-      end
-
-      -- Current directory (tertiary priority)
-      local dir_name = get_current_dir(pane)
-      cells:update_segment_text('dir_text', ' ' .. dir_name .. ' ')
-      table.insert(segments_to_render, 'dir_left')
-      table.insert(segments_to_render, 'dir_icon')
-      table.insert(segments_to_render, 'dir_text')
-      table.insert(segments_to_render, 'dir_right')
 
       -- Số pane. Dạng "2/5" = pane trong tab đang xem / tổng pane trong window;
       -- window chỉ có 1 tab thì hai số trùng nhau nên chỉ hiện một số.
-      local panes_in_tab, panes_in_window = count_panes(window)
       if panes_in_window > 0 then
          local panes_text = panes_in_tab == panes_in_window
             and tostring(panes_in_window)
             or (panes_in_tab .. '/' .. panes_in_window)
          cells:update_segment_text('panes_text', ' ' .. panes_text .. ' ')
+         tail = { 'panes_left', 'panes_icon', 'panes_text', 'panes_right' }
+      end
+
+      local remaining = budget - width_of(head) - width_of(tail)
+      local middle = {}
+
+      -- Thư mục hiện tại: pill = 2 nửa tròn + ' ' + icon + ' ' + tên + ' ' = tên + 6,
+      -- cộng separator3 đứng trước cụm số pane.
+      local dir_name = get_current_dir(pane)
+      local dir_fixed = width_of({ 'dir_left', 'dir_icon', 'dir_right' }) + 2 + SEPARATOR_WIDTH
+      if remaining - dir_fixed >= DIR_MIN_CHARS then
+         dir_name = shorten(dir_name, math.min(20, remaining - dir_fixed))
+         cells:update_segment_text('dir_text', ' ' .. dir_name .. ' ')
+         middle = { 'dir_left', 'dir_icon', 'dir_text', 'dir_right' }
+         remaining = remaining - dir_fixed - wezterm.column_width(dir_name)
+
+         -- Git branch: chỉ hiện khi vẫn còn chỗ cho ít nhất GIT_MIN_CHARS ký tự.
+         local git_branch = get_git_branch(pane)
+         if git_branch then
+            local git_fixed = width_of({ 'git_left', 'git_icon', 'git_right' }) + 2 + SEPARATOR_WIDTH
+            if remaining - git_fixed >= GIT_MIN_CHARS then
+               local branch_text = shorten(git_branch, math.min(25, remaining - git_fixed))
+               cells:update_segment_text('git_text', ' ' .. branch_text .. ' ')
+               middle = {
+                  'git_left', 'git_icon', 'git_text', 'git_right', 'separator2',
+                  'dir_left', 'dir_icon', 'dir_text', 'dir_right',
+               }
+            end
+         end
+      end
+
+      local segments_to_render = {}
+      for _, id in ipairs(head) do
+         table.insert(segments_to_render, id)
+      end
+      for _, id in ipairs(middle) do
+         table.insert(segments_to_render, id)
+      end
+      if #middle > 0 and #tail > 0 then
          table.insert(segments_to_render, 'separator3')
-         table.insert(segments_to_render, 'panes_left')
-         table.insert(segments_to_render, 'panes_icon')
-         table.insert(segments_to_render, 'panes_text')
-         table.insert(segments_to_render, 'panes_right')
+      end
+      for _, id in ipairs(tail) do
+         table.insert(segments_to_render, id)
       end
 
       -- Render all visible segments
       if #segments_to_render > 0 then
-         window:set_left_status(wezterm.format(cells:render(segments_to_render)))
+         local items = cells:render(segments_to_render)
+         layout.set_left(items)
+         window:set_left_status(wezterm.format(items))
       else
+         layout.set_left({})
          window:set_left_status('')
       end
    end)

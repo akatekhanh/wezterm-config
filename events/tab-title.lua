@@ -6,6 +6,7 @@ local wezterm = require('wezterm')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
 local ui = require('colors.palette').ui
+local layout = require('utils.tabbar-layout')
 
 ---
 -- =======================================
@@ -455,7 +456,11 @@ M.setup = function(opts)
    end)
 
    -- BUILTIN EVENT
-   wezterm.on('format-tab-title', function(tab, _tabs, _panes, _config, hover, max_width)
+   wezterm.on('format-tab-title', function(tab, tabs, _panes, config, hover, max_width)
+      -- `max_width` của wezterm không trừ left/right status nên trên màn hình nhỏ tab
+      -- tràn ra ngoài. Tự chia lại theo số cột thật còn trống (utils/tabbar-layout.lua).
+      max_width = layout.fit(max_width, config.tab_max_width, #tabs)
+
       if not tab_list[tab.tab_id] then
          tab_list[tab.tab_id] = Tab:new()
          tab_list[tab.tab_id]:set_info(valid_opts, tab, max_width)
