@@ -60,6 +60,7 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | `SUPER + Enter` | Toggle pane zoom |
 | `SHIFT + Enter` | Insert a newline instead of submitting (Claude Code, REPLs) |
 | `F12` | Debug overlay |
+| `SUPER + r` | Reload config (also picks up new/removed backdrops) |
 
 ### Navigation
 

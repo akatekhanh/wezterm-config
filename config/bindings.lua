@@ -29,6 +29,9 @@ local keys = {
    { key = 'F11', mods = 'NONE',    action = act.ToggleFullScreen },
    { key = 'f',   mods = 'SUPER|SHIFT', action = act.ToggleFullScreen },
    { key = 'F12', mods = 'NONE',    action = act.ShowDebugOverlay },
+   -- default bindings are disabled (see bottom), so reload needs its own key.
+   -- Use it after adding/removing images in backdrops/: that folder is not watched.
+   { key = 'r',   mods = mod.SUPER, action = act.ReloadConfiguration },
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
       key = 'u',

@@ -493,6 +493,7 @@ Key modifiers adapt by platform (see `config/bindings.lua`):
 | Keys | Action |
 |------|--------|
 | `F12` | Debug overlay |
+| `SUPER + r` | Reload config (also picks up new/removed backdrops) |
 | `SUPER + /` | Random background |
 | `SUPER + b` | Toggle focus mode |
 | `SUPER + t` | New tab |
