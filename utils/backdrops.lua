@@ -118,6 +118,19 @@ function BackDrops:set_image_style(style)
    return self
 end
 
+---Chỉnh độ rõ ảnh ngay khi đang chạy (phím trong config/bindings.lua). Chỉ có hiệu lực tới
+---lần reload; muốn giữ thì ghi số vào :set_image_style() trong wezterm.lua.
+---@param window any WezTerm `Window`
+---@param delta number
+function BackDrops:adjust_opacity(window, delta)
+   local value = self.image_style.opacity + delta
+   self.image_style.opacity = math.floor(math.max(0.05, math.min(1, value)) * 100 + 0.5) / 100
+   wezterm.log_info('backdrop opacity = ' .. self.image_style.opacity)
+   if not self.focus_on then
+      self:_set_opt(window, self:_create_opts())
+   end
+end
+
 ---Create the `background` options with the current image
 ---@private
 ---@return table

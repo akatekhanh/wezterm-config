@@ -21,6 +21,7 @@ require('events.background-rotation').setup({ mode = 'cycle' }) -- or 'random'
 require('events.project-backdrop').setup() -- ảnh nền theo tmux session (tiêu đề pane)
 require('events.window-resized').setup()
 require('events.window-state').setup()
+require('events.bell-notify').setup()
 -- `host` must be an ssh alias that resolves from ~/.ssh/config (or user@address)
 require('events.remote-image-paste').setup({ host = 'macmini' })
 

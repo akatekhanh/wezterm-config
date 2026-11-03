@@ -1,6 +1,7 @@
 local gpu_adapters = require('utils.gpu-adapter')
 local backdrops = require('utils.backdrops')
 local colors = require('colors.custom')
+local mocha = require('colors.palette').mocha
 local wezterm = require('wezterm')
 
 return {
@@ -24,6 +25,10 @@ return {
 
    -- background
    background = backdrops:initial_options(false), -- set to true if you want wezterm to start on focus mode
+
+   -- command palette (F2): mặc định nền xám lệch tông với Catppuccin
+   command_palette_bg_color = mocha.mantle,
+   command_palette_fg_color = mocha.text,
 
    -- scrollbar
    enable_scroll_bar = false,

@@ -47,7 +47,7 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 
 > **SUPER** = `Cmd` (macOS) / `Alt` (Windows/Linux)
 > **SUPER_REV** = `Cmd+Ctrl` (macOS) / `Alt+Ctrl` (Windows/Linux)
-> **LEADER** = `SUPER_REV + Space`
+> **LEADER** = `Cmd + ;` (macOS) / `SUPER_REV + Space` (Windows/Linux)
 
 ### Essential
 
@@ -61,6 +61,8 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | `SHIFT + Enter` | Insert a newline instead of submitting (Claude Code, REPLs) |
 | `F12` | Debug overlay |
 | `SUPER + r` | Reload config (also picks up new/removed backdrops) |
+| `Cmd + Shift + Space` | Quick select: label URLs, paths, hashes, ARNs on screen, type the label to copy |
+| `SUPER + click` | Open the link under the mouse, also inside tmux |
 
 ### Navigation
 
@@ -81,6 +83,7 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | `SUPER + ,` / `.` | Cycle backgrounds |
 | `SUPER_REV + /` | Fuzzy search backgrounds |
 | `SUPER + b` | Toggle focus mode |
+| `SUPER_REV + Up/Down` | Make the image more/less visible (until reload) |
 
 ### Key Tables
 
@@ -124,3 +127,5 @@ Based on [KevinSilvester/wezterm-config](https://github.com/KevinSilvester/wezte
 **Inspirations:**
 - [catppuccin/wezterm](https://github.com/catppuccin/wezterm)
 - [WezTerm Show & Tell](https://github.com/wez/wezterm/discussions/628)
+
+Backdrops named `mocha-*` come from [orangci/walls-catppuccin-mocha](https://github.com/orangci/walls-catppuccin-mocha), a community collection without a stated license. Artists keep their rights.

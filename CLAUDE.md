@@ -168,7 +168,7 @@ require('events.background-rotation').setup({ mode = 'cycle' }) -- or 'random'
 ```
 
 **Current Event Modules:**
-- `left-status.setup()` - Shows active key table (LEADER, resize_font, resize_pane)
+- `left-status.setup()` - Shows active key table (LEADER, resize_font, resize_pane), directory and pane count in a fixed-width slot (`layout.left_slot`), so tabs keep their position when switching repos
 - `right-status.setup(opts)` - Right status bar (currently empty but configured for date)
 - `tab-title.setup(opts)` - Complex tab title rendering with icons, admin detection, WSL detection
 - `new-tab-button.setup()` - Custom new tab button appearance
@@ -211,7 +211,7 @@ end
 
 **Leader Key:**
 ```lua
-leader = { key = 'Space', mods = mod.SUPER_REV }
+leader = { key = ';', mods = 'SUPER' } -- macOS; SUPER_REV + Space elsewhere (macOS keeps Cmd+Ctrl+Space for emoji)
 ```
 
 **Background Control Bindings:**
@@ -487,7 +487,7 @@ wezterm.lua           -- Entry point, initializes singletons, registers events
 Key modifiers adapt by platform (see `config/bindings.lua`):
 - **macOS**: `SUPER` = Cmd, `SUPER_REV` = Cmd+Ctrl
 - **Windows/Linux**: `SUPER` = Alt, `SUPER_REV` = Alt+Ctrl
-- **Leader key**: `SUPER_REV + Space`
+- **Leader key**: `Cmd + ;` (macOS), `SUPER_REV + Space` (Windows/Linux)
 
 **Essential bindings:**
 | Keys | Action |

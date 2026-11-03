@@ -33,6 +33,9 @@ local keys = {
    -- Use it after adding/removing images in backdrops/: that folder is not watched.
    { key = 'r',   mods = mod.SUPER, action = act.ReloadConfiguration },
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
+   -- Quick select: gắn nhãn cho URL, đường dẫn, git hash, IP... trên màn hình, gõ nhãn là copy.
+   -- Mẫu thêm nằm ở quick_select_patterns (config/general.lua).
+   { key = 'Space', mods = 'SUPER|SHIFT', action = act.QuickSelect },
    {
       key = 'u',
       mods = mod.SUPER_REV,
@@ -150,7 +153,7 @@ local keys = {
       end)
    },
 
-   -- font size (direct; leader SUPER_REV+Space is eaten by macOS emoji picker)
+   -- font size (direct, no key table needed)
    { key = '-', mods = mod.SUPER,     action = act.DecreaseFontSize },
    { key = '=', mods = mod.SUPER,     action = act.IncreaseFontSize },
    { key = 'r', mods = mod.SUPER_REV, action = act.ResetFontSize },
@@ -200,6 +203,21 @@ local keys = {
       action = wezterm.action_callback(function(window, _pane)
          backdrops:toggle_focus(window)
       end)
+   },
+   -- image visibility, live (not saved: see BackDrops:adjust_opacity)
+   {
+      key = 'UpArrow',
+      mods = mod.SUPER_REV,
+      action = wezterm.action_callback(function(window, _pane)
+         backdrops:adjust_opacity(window, 0.05)
+      end),
+   },
+   {
+      key = 'DownArrow',
+      mods = mod.SUPER_REV,
+      action = wezterm.action_callback(function(window, _pane)
+         backdrops:adjust_opacity(window, -0.05)
+      end),
    },
 
    -- neovim: send Ctrl+/ when Cmd+j is pressed (for Snacks terminal toggle)
@@ -298,10 +316,35 @@ local mouse_bindings = {
    },
 }
 
+-- Cmd/Alt-click mở link, kể cả trong tmux/nvim (app bật mouse reporting). Ctrl-click trên
+-- macOS là chuột phải và bị tmux nuốt, nên thực tế không dùng được. Phải bind cả Down thành
+-- Nop, nếu không app nhận Down mà không nhận Up tương ứng.
+for _, reporting in ipairs({ false, true }) do
+   table.insert(mouse_bindings, {
+      event = { Down = { streak = 1, button = 'Left' } },
+      mods = mod.SUPER,
+      mouse_reporting = reporting,
+      action = act.Nop,
+   })
+   table.insert(mouse_bindings, {
+      event = { Up = { streak = 1, button = 'Left' } },
+      mods = mod.SUPER,
+      mouse_reporting = reporting,
+      action = act.OpenLinkAtMouseCursor,
+   })
+end
+
+-- macOS giữ Cmd+Ctrl+Space cho bảng emoji, nên leader mặc định không bao giờ tới được
+-- wezterm và 2 key table LEADER+f / LEADER+p không dùng được.
+local leader = { key = 'Space', mods = mod.SUPER_REV }
+if platform.is_mac then
+   leader = { key = ';', mods = mod.SUPER, timeout_milliseconds = 1500 }
+end
+
 return {
    disable_default_key_bindings = true,
    -- disable_default_mouse_bindings = true,
-   leader = { key = 'Space', mods = mod.SUPER_REV },
+   leader = leader,
    keys = keys,
    key_tables = key_tables,
    mouse_bindings = mouse_bindings,

@@ -7,6 +7,12 @@ return {
 
    scrollback_lines = 50000,
 
+   -- Thêm vào mẫu mặc định của QuickSelect (URL, đường dẫn, git hash, IP, UUID...)
+   quick_select_patterns = {
+      '\\b(?:s3a?|gs|abfss?)://\\S+', -- đường dẫn object storage
+      '\\barn:[\\w-]+:[\\w-]+:[\\w-]*:\\d*:\\S+', -- AWS ARN
+   },
+
    hyperlink_rules = {
       -- Matches: a URL in parens: (URL)
       {
@@ -36,6 +42,11 @@ return {
       {
          regex = '\\b\\w+://\\S+[)/a-zA-Z0-9-]+',
          format = '$0',
+      },
+      -- cổng dev server in ra không có scheme: localhost:3000/docs
+      {
+         regex = '\\b(?:localhost|127\\.0\\.0\\.1):\\d+(?:/\\S*)?',
+         format = 'http://$0',
       },
       -- implicit mailto link
       {
