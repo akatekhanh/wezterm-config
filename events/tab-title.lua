@@ -463,9 +463,7 @@ M.setup = function(opts)
 
       if not tab_list[tab.tab_id] then
          tab_list[tab.tab_id] = Tab:new()
-         tab_list[tab.tab_id]:set_info(valid_opts, tab, max_width)
          tab_list[tab.tab_id]:create_cells()
-         return tab_list[tab.tab_id]:render()
       end
 
       tab_list[tab.tab_id]:set_info(valid_opts, tab, max_width)

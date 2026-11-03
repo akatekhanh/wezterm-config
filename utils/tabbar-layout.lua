@@ -49,7 +49,9 @@ end
 
 ---@param items FormatItem[]
 function M.set_right(items)
-   state.right_cols = M.items_width(items)
+   -- Giữ mức cao nhất từng thấy: số CPU/RAM đổi số chữ số (9.80 → 10.20, 9% → 10%) không
+   -- được làm đổi độ rộng dành cho tab và left status, nếu không tab nhích theo từng giây.
+   state.right_cols = math.max(state.right_cols, M.items_width(items))
 end
 
 ---Đặt thẳng số cột tab bar (dùng cho test / debug; bình thường dùng update_from_window).
@@ -88,7 +90,7 @@ end
 M.LEFT_MIN_WIDTH = 10
 
 ---Độ rộng cho mỗi tab. CỐ ĐỊNH theo (số cột tab bar, số tab, right status), KHÔNG phụ
----thuộc left status: left status đổi theo tab đang active (git branch, tên thư mục)
+---thuộc left status: left status đổi theo tab đang active (tên thư mục)
 ---nên nếu chia theo nó thì mỗi lần chuyển tab cả dãy tab lại co giãn, nhìn không
 ---đồng nhất. Thay vào đó left status phải tự cắt để vừa phần còn lại (xem left_budget).
 ---@param max_width number giá trị wezterm đưa vào format-tab-title (đã bị nó cắt bớt)
@@ -128,6 +130,46 @@ function M.left_budget(tab_max_width, num_tabs)
       budget = M.LEFT_MIN_WIDTH
    end
    return budget
+end
+
+-- Left status không rộng hơn mức này dù màn hình còn nhiều chỗ, để khoảng trống giữa
+-- pill và tab không quá lớn khi tên thư mục ngắn.
+-- = pill thư mục (16 ký tự + 6) + separator (3) + pill số pane dạng "12/34" (11).
+M.LEFT_SLOT_MAX = 36
+
+---Độ rộng CỐ ĐỊNH của left status. Tab vẽ ngay sau left status nên vị trí tab phụ thuộc
+---vào giá trị này: nó chỉ được đổi khi đổi số tab hoặc đổi kích thước cửa sổ, không
+---được đổi theo thư mục của tab đang active.
+---@param tab_max_width number config.tab_max_width
+---@param num_tabs number
+---@return number
+function M.left_slot(tab_max_width, num_tabs)
+   return math.min(M.left_budget(tab_max_width, num_tabs) or M.LEFT_SLOT_MAX, M.LEFT_SLOT_MAX)
+end
+
+---Đưa FormatItem[] về đúng `width` cột: dư thì cắt, thiếu thì thêm khoảng trắng màu `pad_bg`.
+---@param items FormatItem[]
+---@param width number
+---@param pad_bg string
+---@return FormatItem[]
+function M.fit_items(items, width, pad_bg)
+   local out = {}
+   local used = 0
+   for _, item in ipairs(items) do
+      if type(item) == 'table' and item.Text then
+         local text = wezterm.truncate_right(item.Text, width - used)
+         used = used + wezterm.column_width(text)
+         table.insert(out, { Text = text })
+      else
+         table.insert(out, item)
+      end
+   end
+   if used < width then
+      table.insert(out, { Background = { Color = pad_bg } })
+      table.insert(out, { Text = string.rep(' ', width - used) })
+      table.insert(out, 'ResetAttributes')
+   end
+   return out
 end
 
 ---Chỉ để debug: `wezterm.log_info(layout.debug())`
