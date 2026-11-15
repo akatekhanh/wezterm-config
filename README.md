@@ -27,19 +27,75 @@
 
 ---
 
-## Quick Start
+## Setup
+
+### 1. Install dependencies
+
+**macOS** (Homebrew):
 
 ```sh
-# Backup existing config (if any)
-mv ~/.config/wezterm ~/.config/wezterm.bak
+brew install --cask wezterm font-jetbrains-mono-nerd-font
+brew install tmux       # optional: only for the tmux config (step 3)
+brew install pngpaste   # optional: only for remote image paste on ALT + i (step 4)
+```
 
-# Clone this config
+**Linux / Windows:** install [WezTerm](https://wezfurlong.org/wezterm/installation.html)
+(v20240127+ recommended) and [JetBrainsMono Nerd Font](https://www.nerdfonts.com/font-downloads).
+
+### 2. Install the WezTerm config
+
+```sh
+# Back up any existing config. An old single-file ~/.wezterm.lua can shadow this one.
+mv ~/.config/wezterm ~/.config/wezterm.bak 2>/dev/null
+mv ~/.wezterm.lua ~/.wezterm.lua.bak 2>/dev/null
+
 git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 ```
 
-**Requirements:**
-- [WezTerm](https://wezfurlong.org/wezterm/installation.html) (v20240127+ recommended)
-- [JetBrainsMono Nerd Font](https://www.nerdfonts.com/)
+Open WezTerm. The config loads on its own and reloads whenever a file changes;
+`SUPER + r` reloads it manually. On Windows, clone into `%USERPROFILE%\.config\wezterm`.
+
+### 3. Install the tmux config (optional, macOS)
+
+The `tmux/` folder holds the tmux config used alongside this setup: mouse-wheel scrolling
+into copy-mode, a 50k-line scrollback, and a status bar showing session, prefix, zoom,
+git branch, current directory, CPU/RAM and time.
+
+```sh
+# Back up any existing tmux config
+mv ~/.tmux.conf ~/.tmux.conf.bak 2>/dev/null
+
+# Link the config and its status-bar scripts from this repo
+ln -s ~/.config/wezterm/tmux/tmux.conf ~/.tmux.conf
+mkdir -p ~/.tmux && ln -s ~/.config/wezterm/tmux/scripts ~/.tmux/scripts
+
+# New tmux sessions pick it up automatically. If tmux is already running, reload it:
+tmux source-file ~/.tmux.conf
+```
+
+Because these are symlinks, a `git pull` in `~/.config/wezterm` updates tmux too.
+The status-bar scripts are macOS-only (`sysctl`, `memory_pressure`, `pmset`).
+
+### 4. Remove the author's personal settings
+
+A few settings point at the author's own machines. They don't break anything, but the
+matching keys won't work until you change or remove them:
+
+| Setting | Where | What to do |
+|---------|-------|------------|
+| `SUPER + k`: SSH tab to `khanhpc` | `khanhpc` entry in `config/domains.lua`, `DomainName = 'khanhpc'` binding in `config/bindings.lua` | Point it at your own host, or delete both entries |
+| `ALT + i`: paste clipboard image to a remote host | `remote-image-paste` line in `wezterm.lua` (`host = 'macmini'`) | Set `host` to an alias from your `~/.ssh/config`, or delete the line |
+| `SUPER_REV + t`: WSL tab | `WSL:Ubuntu` entry in `config/domains.lua` (user `kevin`) | Windows only: set your distro and username |
+
+For fonts, default shell and colors, see [Customization](#customization).
+
+### Troubleshooting
+
+- **Icons show as boxes:** the Nerd Font is missing. Check with
+  `wezterm ls-fonts --list-system | grep -i jetbrains`.
+- **Config error on startup:** press `F12` to open the debug overlay with the Lua error.
+- **tmux status bar has no git/CPU/RAM:** check that `~/.tmux/scripts/*.sh` exist and are
+  executable (`chmod +x ~/.tmux/scripts/*.sh`).
 
 ---
 
@@ -101,29 +157,6 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 | `config/domains.lua` | SSH/WSL domains |
 | `config/launch.lua` | Default shell |
 | `backdrops/` | Background images |
-
----
-
-## tmux (optional)
-
-The `tmux/` folder holds the tmux config used alongside this WezTerm setup: mouse scrolling
-into copy-mode, a 50k-line scrollback, and a status bar showing session, prefix, zoom,
-git branch, current directory, CPU/RAM and time.
-
-```sh
-# Backup existing tmux config (if any)
-mv ~/.tmux.conf ~/.tmux.conf.bak 2>/dev/null
-
-# Link config + status-bar scripts from this repo
-ln -s ~/.config/wezterm/tmux/tmux.conf ~/.tmux.conf
-mkdir -p ~/.tmux && ln -s ~/.config/wezterm/tmux/scripts ~/.tmux/scripts
-
-# Reload a running tmux server
-tmux source-file ~/.tmux.conf
-```
-
-> The status-bar scripts (`sysstat.sh`, `battery.sh`) are macOS-only (`sysctl`, `memory_pressure`, `pmset`).
-> `tmux.conf` expects them at `~/.tmux/scripts/`.
 
 ---
 
