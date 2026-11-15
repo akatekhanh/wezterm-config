@@ -104,6 +104,29 @@ git clone https://github.com/akatekhanh/wezterm-config.git ~/.config/wezterm
 
 ---
 
+## tmux (optional)
+
+The `tmux/` folder holds the tmux config used alongside this WezTerm setup: mouse scrolling
+into copy-mode, a 50k-line scrollback, and a status bar showing session, prefix, zoom,
+git branch, current directory, CPU/RAM and time.
+
+```sh
+# Backup existing tmux config (if any)
+mv ~/.tmux.conf ~/.tmux.conf.bak 2>/dev/null
+
+# Link config + status-bar scripts from this repo
+ln -s ~/.config/wezterm/tmux/tmux.conf ~/.tmux.conf
+mkdir -p ~/.tmux && ln -s ~/.config/wezterm/tmux/scripts ~/.tmux/scripts
+
+# Reload a running tmux server
+tmux source-file ~/.tmux.conf
+```
+
+> The status-bar scripts (`sysstat.sh`, `battery.sh`) are macOS-only (`sysctl`, `memory_pressure`, `pmset`).
+> `tmux.conf` expects them at `~/.tmux/scripts/`.
+
+---
+
 ## Structure
 
 ```
@@ -112,7 +135,8 @@ wezterm.lua           # Entry point
 ├── events/           # Event handlers (tab titles, status bar)
 ├── utils/            # Utilities (backdrops, GPU, platform detection)
 ├── colors/           # Color schemes (Catppuccin Mocha)
-└── backdrops/        # Background images
+├── backdrops/        # Background images
+└── tmux/             # tmux.conf + status-bar scripts
 ```
 
 ---
