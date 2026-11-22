@@ -1,4 +1,8 @@
+local wezterm = require('wezterm')
 local Config = require('config')
+
+-- Watch backdrops/ so adding or deleting images triggers automatic config reload
+wezterm.add_to_config_reload_watch_list(wezterm.config_dir .. '/backdrops')
 
 require('utils.backdrops')
    -- :set_focus('#000000')

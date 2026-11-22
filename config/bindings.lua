@@ -30,8 +30,30 @@ local keys = {
    { key = 'f',   mods = 'SUPER|SHIFT', action = act.ToggleFullScreen },
    { key = 'F12', mods = 'NONE',    action = act.ShowDebugOverlay },
    -- default bindings are disabled (see bottom), so reload needs its own key.
-   -- Use it after adding/removing images in backdrops/: that folder is not watched.
-   { key = 'r',   mods = mod.SUPER, action = act.ReloadConfiguration },
+   -- Bind both Cmd+r and Cmd+Shift+R; clear stale background override before reloading
+   -- so deleted images don't error, and show a toast confirming the reload ran.
+   {
+      key = 'r',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         local overrides = window:get_config_overrides() or {}
+         overrides.background = nil
+         window:set_config_overrides(overrides)
+         wezterm.reload_configuration()
+         window:toast_notification('WezTerm', 'Config & backdrops reloaded', nil, 2000)
+      end),
+   },
+   {
+      key = 'R',
+      mods = mod.SUPER .. '|SHIFT',
+      action = wezterm.action_callback(function(window, _pane)
+         local overrides = window:get_config_overrides() or {}
+         overrides.background = nil
+         window:set_config_overrides(overrides)
+         wezterm.reload_configuration()
+         window:toast_notification('WezTerm', 'Config & backdrops reloaded', nil, 2000)
+      end),
+   },
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
       key = 'u',

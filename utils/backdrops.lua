@@ -118,6 +118,18 @@ function BackDrops:set_image_style(style)
    return self
 end
 
+local function file_exists(path)
+   if not path then
+      return false
+   end
+   local f = io.open(path, 'r')
+   if f then
+      f:close()
+      return true
+   end
+   return false
+end
+
 ---Create the `background` options with the current image
 ---@private
 ---@return table
@@ -125,8 +137,19 @@ function BackDrops:_create_opts()
    -- Không có ảnh nào (thư mục backdrops rỗng, hoặc wezterm.glob() không chạy được
    -- ngoài GUI) thì chỉ trả lớp nền đục. Nếu vẫn tạo layer ảnh thì source thành
    -- `{ File = nil }` = bảng rỗng, và wezterm báo "Expected a valid BackgroundSource".
-   if not self.images[self.current_idx] then
-      return { self:_base_layer() }
+   if not file_exists(self.images[self.current_idx]) then
+      -- If a file was deleted on disk before reload, fall back to the first valid image.
+      local fallback_idx = nil
+      for i, path in ipairs(self.images) do
+         if file_exists(path) then
+            fallback_idx = i
+            break
+         end
+      end
+      if not fallback_idx then
+         return { self:_base_layer() }
+      end
+      self.current_idx = fallback_idx
    end
 
    return {
