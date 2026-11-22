@@ -162,6 +162,44 @@ local colors = {
    scircle_active        = { bg = ui.glass, fg = ui.tab_active_bg },
 }
 
+---Color set for the whole pill of a remote tab, with the same keys as `colors` above.
+---@param accent string identifying color (text when inactive, background when active)
+---@param bg string tinted background when inactive
+---@param hover_bg string tinted background when hovered
+---@return table<string, Cells.SegmentColors>
+local function remote_colors(accent, bg, hover_bg)
+   -- stylua: ignore
+   return {
+      text_default          = { bg = bg,       fg = accent },
+      text_hover            = { bg = hover_bg, fg = accent },
+      text_active           = { bg = accent,   fg = ui.on_accent },
+
+      -- A peach unseen dot would vanish on a (peach) mosh tab, so use red; on the
+      -- solid accent of an active tab, use dark text instead.
+      unseen_output_default = { bg = bg,       fg = ui.unseen_active },
+      unseen_output_hover   = { bg = hover_bg, fg = ui.unseen_active },
+      unseen_output_active  = { bg = accent,   fg = ui.on_accent },
+
+      scircle_default       = { bg = ui.glass, fg = bg },
+      scircle_hover         = { bg = ui.glass, fg = hover_bg },
+      scircle_active        = { bg = ui.glass, fg = accent },
+   }
+end
+
+---Color sets by tab kind: `colors` for local tabs, the others for remote tabs.
+local TAB_COLORS = {
+   normal = colors,
+   mosh = remote_colors(ui.remote_mosh, ui.remote_mosh_bg, ui.remote_mosh_hover_bg),
+   ssh = remote_colors(ui.remote_ssh, ui.remote_ssh_bg, ui.remote_ssh_hover_bg),
+}
+
+-- Names of the wezterm SSH domains in config/domains.lua (e.g. 'khanhpc'). A tab opened
+-- in one runs on the remote host, so wezterm knows only its domain_name, not its process.
+local SSH_DOMAINS = {}
+for _, domain in ipairs(require('config.domains').ssh_domains or {}) do
+   SSH_DOMAINS[domain.name] = true
+end
+
 ---
 -- ================
 -- Helper functions
@@ -211,6 +249,28 @@ local function create_title(process_name, base_title, max_width, inset, tab_inde
    return prefix .. wezterm.pad_right(wezterm.truncate_right(title, avail), avail)
 end
 
+---Whether the tab is on another machine via mosh or ssh, or nil for a local tab.
+---Only detectable when mosh/ssh runs DIRECTLY in the tab: inside a local tmux, wezterm
+---sees just the `tmux` process and a title set to the tmux session name.
+---@param process_name string
+---@param pane_title string
+---@param domain_name string
+---@return 'mosh'|'ssh'|nil
+local function detect_remote(process_name, pane_title, domain_name)
+   -- mosh-client prefixes the title with '[mosh] '; `mosh` is the perl launcher script.
+   if
+      process_name == 'mosh-client'
+      or process_name == 'mosh'
+      or pane_title:match('^%[mosh%] ') ~= nil
+   then
+      return 'mosh'
+   end
+   if process_name == 'ssh' or SSH_DOMAINS[domain_name] then
+      return 'ssh'
+   end
+   return nil
+end
+
 ---@param panes any[] WezTerm https://wezfurlong.org/wezterm/config/lua/pane/index.html
 local function check_unseen_output(panes)
    local unseen_output = false
@@ -243,6 +303,7 @@ end
 ---@field is_wsl boolean
 ---@field is_admin boolean
 ---@field is_khanhpc boolean
+---@field remote 'mosh'|'ssh'|nil set when the tab is on another machine; recolors the pill
 ---@field unseen_output boolean
 ---@field unseen_output_count number
 ---@field is_active boolean
@@ -304,6 +365,12 @@ function Tab:set_info(event_opts, tab, max_width)
       pane_title:match('akatekhanh@') or
       pane_title:match('100%.69%.140%.48')
    ) ~= nil
+   self.remote = detect_remote(process_name, pane_title, domain_name)
+   if self.remote == 'mosh' then
+      -- The tab color already says mosh, so drop the '[mosh] ' prefix and give those
+      -- 7 columns back to the real title.
+      pane_title = pane_title:gsub('^%[mosh%] ', '')
+   end
    self.unseen_output = false
    self.unseen_output_count = 0
 
@@ -374,15 +441,16 @@ function Tab:update_cells(event_opts, is_active, hover)
       )
    end
 
+   local c = TAB_COLORS[self.remote or 'normal']
    self.cells
-      :update_segment_colors('scircle_left', colors['scircle_' .. tab_state])
-      :update_segment_colors('admin', colors['text_' .. tab_state])
-      :update_segment_colors('wsl', colors['text_' .. tab_state])
+      :update_segment_colors('scircle_left', c['scircle_' .. tab_state])
+      :update_segment_colors('admin', c['text_' .. tab_state])
+      :update_segment_colors('wsl', c['text_' .. tab_state])
       :update_segment_colors('khanhpc', { bg = ui.alert_bg, fg = ui.alert_fg })
-      :update_segment_colors('title', colors['text_' .. tab_state])
-      :update_segment_colors('unseen_output', colors['unseen_output_' .. tab_state])
-      :update_segment_colors('padding', colors['text_' .. tab_state])
-      :update_segment_colors('scircle_right', colors['scircle_' .. tab_state])
+      :update_segment_colors('title', c['text_' .. tab_state])
+      :update_segment_colors('unseen_output', c['unseen_output_' .. tab_state])
+      :update_segment_colors('padding', c['text_' .. tab_state])
+      :update_segment_colors('scircle_right', c['scircle_' .. tab_state])
 end
 
 ---@return FormatItem[] (ref: https://wezfurlong.org/wezterm/config/lua/wezterm/format.html)

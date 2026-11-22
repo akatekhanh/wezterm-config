@@ -34,6 +34,21 @@ local mocha = {
    crust     = '#11111b',
 }
 
+---Blend two hex colors: `t` is the weight of `fg` (0 = all `bg`, 1 = all `fg`).
+---Used to derive tinted backgrounds for remote tabs without hardcoding hex.
+---@param fg string '#rrggbb'
+---@param bg string '#rrggbb'
+---@param t number
+local function mix(fg, bg, t)
+   local out = '#'
+   for i = 2, 6, 2 do
+      local a = tonumber(fg:sub(i, i + 1), 16)
+      local b = tonumber(bg:sub(i, i + 1), 16)
+      out = out .. string.format('%02x', math.floor(a * t + b * (1 - t) + 0.5))
+   end
+   return out
+end
+
 -- Token ngữ nghĩa: đặt tên theo VAI TRÒ trong UI, không theo tên màu, để đổi theme
 -- chỉ cần trỏ lại các token này sang palette khác.
 -- stylua: ignore
@@ -54,6 +69,16 @@ local ui = {
    tab_hover_fg   = mocha.text,
    tab_active_bg  = mocha.sapphire,
    tab_active_fg  = mocha.crust,
+
+   -- Tabs that mosh/ssh into another machine: the whole pill is recolored. Inactive and
+   -- hover use an accent-tinted background, active uses the solid accent. Blue is
+   -- avoided because it is too close to the sapphire of a normal active tab.
+   remote_mosh          = mocha.peach,
+   remote_mosh_bg       = mix(mocha.peach, mocha.base, 0.28),
+   remote_mosh_hover_bg = mix(mocha.peach, mocha.base, 0.40),
+   remote_ssh           = mocha.mauve,
+   remote_ssh_bg        = mix(mocha.mauve, mocha.base, 0.28),
+   remote_ssh_hover_bg  = mix(mocha.mauve, mocha.base, 0.40),
 
    -- Chỉ báo output chưa xem
    unseen         = mocha.peach,
