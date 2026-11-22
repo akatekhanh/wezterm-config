@@ -29,7 +29,7 @@
 
 ## Backdrops
 
-![backdrop gallery](./.github/screenshots/backdrops.png)
+![backdrop gallery](./.github/screenshots/backdrops.jpg)
 
 To add your own, drop an image (jpg, png, gif, ...) into `backdrops/`. WezTerm watches the
 folder and reloads on its own when images are added or removed. See
