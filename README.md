@@ -19,11 +19,21 @@
 
 ## Features
 
-- **Dynamic Background System** - Cycle through 25+ curated anime & space wallpapers
+- **Dynamic Background System** - Cycle through 34 Catppuccin Mocha-toned wallpapers (cozy cats, lofi rooms, pixel art, space)
 - **Smart GPU Selection** - Auto-selects best GPU/graphics API for WebGpu
 - **Platform-Adaptive Keys** - Same shortcuts work across macOS, Windows, Linux
 - **Custom Tab Rendering** - Admin/WSL detection, unseen output indicators
 - **Focus Mode** - Toggle solid background for distraction-free coding
+
+---
+
+## Backdrops
+
+![backdrop gallery](./.github/screenshots/backdrops.png)
+
+To add your own, drop an image (jpg, png, gif, ...) into `backdrops/`. WezTerm watches the
+folder and reloads on its own when images are added or removed. See
+[docs/BACKDROP_GUIDE.md](docs/BACKDROP_GUIDE.md) for sizing and sourcing tips.
 
 ---
 
