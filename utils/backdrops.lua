@@ -197,34 +197,16 @@ end
 ---@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 ---@param background_opts table background option
 function BackDrops:_set_opt(window, background_opts)
-   local effective = window:effective_config()
-   window:set_config_overrides({
-      background = background_opts,
-      enable_tab_bar = effective.enable_tab_bar,
-      window_background_opacity = effective.window_background_opacity,
-   })
+   local overrides = window:get_config_overrides() or {}
+   overrides.background = background_opts
+   window:set_config_overrides(overrides)
 end
 
 ---Override the current window options for background with focus color
 ---@private
 ---@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:_set_focus_opt(window)
-   local effective = window:effective_config()
-   local opts = {
-      background = {
-         {
-            source = { Color = self.focus_color },
-            height = '120%',
-            width = '120%',
-            vertical_offset = '-10%',
-            horizontal_offset = '-10%',
-            opacity = 1,
-         },
-      },
-      enable_tab_bar = effective.enable_tab_bar,
-      window_background_opacity = effective.window_background_opacity,
-   }
-   window:set_config_overrides(opts)
+   self:_set_opt(window, self:_create_focus_opts())
 end
 
 ---Convert the `files` array to a table of `InputSelector` choices
@@ -244,6 +226,10 @@ end
 ---Pass in `Window` object to override the current window options
 ---@param window any? WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:random(window)
+   if #self.images == 0 then
+      return
+   end
+   self.focus_on = false
    self.current_idx = math.random(#self.images)
 
    if window ~= nil then
@@ -265,7 +251,7 @@ function BackDrops:set_index(window, idx)
       return false
    end
    self.current_idx = idx
-   if window ~= nil then
+   if window ~= nil and not self.focus_on then
       self:_set_opt(window, self:_create_opts())
    end
    return true
@@ -274,7 +260,11 @@ end
 ---Cycle the loaded `files` and select the next background
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:cycle_forward(window)
-   if self.current_idx == #self.images then
+   if #self.images == 0 then
+      return
+   end
+   self.focus_on = false
+   if self.current_idx >= #self.images then
       self.current_idx = 1
    else
       self.current_idx = self.current_idx + 1
@@ -285,7 +275,11 @@ end
 ---Cycle the loaded `files` and select the previous background
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:cycle_back(window)
-   if self.current_idx == 1 then
+   if #self.images == 0 then
+      return
+   end
+   self.focus_on = false
+   if self.current_idx <= 1 then
       self.current_idx = #self.images
    else
       self.current_idx = self.current_idx - 1
@@ -297,11 +291,12 @@ end
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 ---@param idx number index of the `files` array
 function BackDrops:set_img(window, idx)
-   if idx > #self.images or idx < 0 then
+   if #self.images == 0 or not idx or idx > #self.images or idx < 1 then
       wezterm.log_error('Index out of range')
       return
    end
 
+   self.focus_on = false
    self.current_idx = idx
    self:_set_opt(window, self:_create_opts())
 end

@@ -4,8 +4,7 @@ require('utils.backdrops')
    -- :set_focus('#000000')
    -- :set_images_dir(require('wezterm').home_dir .. '/Pictures/Wallpapers/')
    -- Độ rõ ảnh nền: tăng opacity/brightness để ảnh rõ hơn, giảm nếu chữ khó đọc.
-   -- (gốc: opacity 0.18, brightness 0.5 — chỉ nhích opacity lên một chút)
-   :set_image_style({ opacity = 0.20, brightness = 0.45, saturation = 0.9 })
+   :set_image_style({ opacity = 0.35, brightness = 0.70, saturation = 0.95 })
    :set_images()
 
 require('events.khanhpc-theme').setup()

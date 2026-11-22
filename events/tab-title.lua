@@ -448,11 +448,9 @@ M.setup = function(opts)
    -- CUSTOM EVENT
    -- Event listener to manually update the tab name
    wezterm.on('tabs.toggle-tab-bar', function(window, _pane)
-      local effective_config = window:effective_config()
-      window:set_config_overrides({
-         enable_tab_bar = not effective_config.enable_tab_bar,
-         background = effective_config.background,
-      })
+      local overrides = window:get_config_overrides() or {}
+      overrides.enable_tab_bar = not window:effective_config().enable_tab_bar
+      window:set_config_overrides(overrides)
    end)
 
    -- BUILTIN EVENT
