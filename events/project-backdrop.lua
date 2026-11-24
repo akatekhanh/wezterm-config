@@ -42,7 +42,9 @@ M.setup = function()
          if not is_tmux(pane) then
             return
          end
-         local title = pane:get_title() or ''
+         -- Strip remote prefix added by tmux/tmux.conf so entering/leaving mosh or ssh
+         -- keeps the session's own backdrop.
+         local title = (pane:get_title() or ''):gsub('^%[mosh%] ', ''):gsub('^%[ssh%] ', '')
          if title == '' then
             return
          end

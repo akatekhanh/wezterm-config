@@ -250,8 +250,9 @@ local function create_title(process_name, base_title, max_width, inset, tab_inde
 end
 
 ---Whether the tab is on another machine via mosh or ssh, or nil for a local tab.
----Only detectable when mosh/ssh runs DIRECTLY in the tab: inside a local tmux, wezterm
----sees just the `tmux` process and a title set to the tmux session name.
+---Works both when mosh/ssh runs directly in the tab and when it runs inside a local
+---tmux configured with tmux/tmux.conf (which prefixes the terminal title with
+---'[mosh] ' or '[ssh] ' based on pane_current_command).
 ---@param process_name string
 ---@param pane_title string
 ---@param domain_name string
@@ -265,7 +266,11 @@ local function detect_remote(process_name, pane_title, domain_name)
    then
       return 'mosh'
    end
-   if process_name == 'ssh' or SSH_DOMAINS[domain_name] then
+   if
+      process_name == 'ssh'
+      or SSH_DOMAINS[domain_name]
+      or pane_title:match('^%[ssh%] ') ~= nil
+   then
       return 'ssh'
    end
    return nil
@@ -370,6 +375,9 @@ function Tab:set_info(event_opts, tab, max_width)
       -- The tab color already says mosh, so drop the '[mosh] ' prefix and give those
       -- 7 columns back to the real title.
       pane_title = pane_title:gsub('^%[mosh%] ', '')
+   elseif self.remote == 'ssh' then
+      -- Same for the '[ssh] ' prefix emitted by tmux/tmux.conf.
+      pane_title = pane_title:gsub('^%[ssh%] ', '')
    end
    self.unseen_output = false
    self.unseen_output_count = 0
